@@ -10,6 +10,7 @@ Uruchomienie (dev):
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
 import platform
@@ -19,6 +20,7 @@ import socket
 import subprocess
 import unicodedata
 import uuid
+import zipfile
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 from difflib import SequenceMatcher
@@ -724,6 +726,107 @@ async def upload(kontekst: str, owner_id: str, request: Request) -> JSONResponse
                 await out.write(await value.read())
             urls.append(f"/uploads/{kontekst}/{owner_id}/{fname}")
     return JSONResponse({"urls": urls})
+
+
+# ---- Admin: import/restore archiwum ---------------------------------------- #
+# Repo publiczne nie zawiera danych produkcyjnych (patrz .gitignore: data/,
+# uploads/, arch/) — na świeżej instalacji te katalogi są puste. Ten endpoint
+# pozwala je odtworzyć z zip-a spakowanego ręcznie z katalogu produkcyjnego
+# (np. `zip -r archiwum.zip data uploads arch`).
+ALLOWED_TOP_DIRS = ("data", "uploads", "arch")
+
+
+def _safe_zip_member(name: str) -> tuple[str, Path] | None:
+    """Waliduje wpis archiwum: musi leżeć w data/uploads/arch i nie może wyjść
+    poza katalog aplikacji (ochrona przed zip-slip). Zwraca (katalog_top,
+    docelowa_sciezka) albo None, gdy wpis jest niedozwolony."""
+    norm = name.replace("\\", "/").strip("/")
+    if not norm:
+        return None
+    parts = Path(norm).parts
+    if ".." in parts or parts[0] not in ALLOWED_TOP_DIRS:
+        return None
+    target = (BASE / norm).resolve()
+    if BASE.resolve() not in target.parents:
+        return None
+    return parts[0], target
+
+
+def _reload_data_collections() -> None:
+    """Po podmianie plików w data/ na dysku odświeża stan w pamięci procesu —
+    bez tego backend serwowałby stare dane aż do restartu (patrz load_json
+    przy starcie modułu)."""
+    LOKACJE[:] = load_json(LOKACJE_FILE, [])
+    STATUSY.clear()
+    STATUSY.update(load_json(STATUSY_FILE, {}))
+    PROBLEMY[:] = load_json(PROBLEMY_FILE, [])
+    ZAKUPY[:] = load_json(ZAKUPY_FILE, [])
+    EKSPLOATACJA[:] = load_json(EKSPLOATACJA_FILE, [])
+    PRZERWA[:] = load_json(PRZERWA_FILE, [])
+    PROJEKTY[:] = load_json(PROJEKTY_FILE, [])
+    IMG_MAP.clear()
+    IMG_MAP.update(build_image_map(LOKACJE))
+
+
+@app.post("/api/admin/import-archiwum")
+async def import_archiwum(request: Request) -> JSONResponse:
+    """Wgrywa zip z kopią zapasową i podmienia nią data/uploads/arch. Katalogi
+    top-level obecne w archiwum są NAJPIERW przenoszone do _backup/<znacznik
+    czasu>/ (nie kasowane) — na wypadek wgrania złego pliku."""
+    form = await request.form()
+    plik = next((v for v in form.values() if isinstance(v, UploadFile)), None)
+    if plik is None:
+        raise HTTPException(400, "Brak pliku archiwum")
+
+    raw = await plik.read()
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(raw))
+    except zipfile.BadZipFile:
+        raise HTTPException(400, "Plik nie jest poprawnym archiwum zip")
+
+    entries: list[tuple[str, Path, zipfile.ZipInfo]] = []
+    top_dirs: set[str] = set()
+    for info in zf.infolist():
+        if info.is_dir():
+            continue
+        valid = _safe_zip_member(info.filename)
+        if valid is None:
+            raise HTTPException(
+                400,
+                f"Niedozwolona ścieżka w archiwum: „{info.filename}” — dozwolone "
+                f"tylko wewnątrz {', '.join(f'{d}/' for d in ALLOWED_TOP_DIRS)}",
+            )
+        top_dir, target = valid
+        top_dirs.add(top_dir)
+        entries.append((top_dir, target, info))
+
+    if not entries:
+        raise HTTPException(400, "Archiwum nie zawiera żadnych plików w data/, uploads/ ani arch/")
+
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_dir = BASE / "_backup" / stamp
+    for top_dir in top_dirs:
+        src = BASE / top_dir
+        if src.exists():
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src), str(backup_dir / top_dir))
+        src.mkdir(parents=True, exist_ok=True)
+
+    for _, target, info in entries:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with zf.open(info) as src_f, target.open("wb") as out_f:
+            shutil.copyfileobj(src_f, out_f)
+
+    if "data" in top_dirs:
+        _reload_data_collections()
+
+    await emit("system", "restore", {"topDirs": sorted(top_dirs)})
+    return JSONResponse({
+        "ok": True,
+        "zaimportowano": sorted(top_dirs),
+        "plikow": len(entries),
+        "backup": str(backup_dir.relative_to(BASE)) if backup_dir.exists() else None,
+    })
 
 
 # ---- WebSocket ------------------------------------------------------------- #

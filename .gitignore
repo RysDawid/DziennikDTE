@@ -2,6 +2,7 @@
 data/
 uploads/
 arch/
+_backup/
 
 # Embedded/portable Python distribution
 .python-embed/

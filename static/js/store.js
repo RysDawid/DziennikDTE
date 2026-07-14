@@ -38,6 +38,7 @@ export const store = reactive({
   // wewn.
   _ws: null,
   _saveTimers: {},
+  _importing: false, // true podczas własnego POST /api/admin/import-archiwum — tłumi auto-reload z WS (patrz ImportArchiwum.js), które i tak pokaże wynik i przeładuje samo
 
   // --- Inicjalizacja -------------------------------------------------- //
   // Pasek postępu na ekranie ładowania: prawdziwe kroki (7 zapytań) wyznaczają
@@ -92,6 +93,14 @@ export const store = reactive({
 
   _onWS(msg) {
     const { channel, action, payload } = msg;
+    if (channel === "system" && action === "restore") {
+      // Ktoś zaimportował archiwum (data/uploads/arch podmienione na dysku) —
+      // stan w pamięci tej karty jest nieaktualny, najprościej przeładować.
+      // Własna karta inicjatora tłumi to (_importing) — pokazuje wynik i
+      // przeładowuje się sama po zamknięciu modala.
+      if (!this._importing) location.reload();
+      return;
+    }
     if (channel === "raport" && action === "update") {
       if (payload.date === this.raportDate) this.raport = { ...payload.data, editable: payload.date === this.today };
       return;

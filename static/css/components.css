@@ -443,6 +443,15 @@
 }
 .mu-file__rm:hover { color: var(--pilne); }
 
+.mu-note {
+  margin: 0 16px 12px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  border: var(--bw) solid var(--border);
+}
+.mu-note--ok { background: var(--field); }
+.mu-note--danger { color: var(--pilne); border-color: var(--pilne); }
+
 .mu-foot {
   display: flex;
   gap: 8px;
