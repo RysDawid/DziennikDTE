@@ -1,0 +1,626 @@
+/* ====================================================================== *
+ * TAB Raport  —  bez zaokrągleń, bordery 2px
+ * ====================================================================== */
+/* Layout: flex-column → board__bar pełna szerokość, ciało = daynav + karty */
+.raport {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.raport__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  /* Półprzezroczyste tło (kolor bazowy @ .62) — przygasza animowany grid pod spodem */
+  background: rgba(24, 29, 40, 0.62);
+}
+:root[data-theme="light"] .raport__body {
+  background: rgba(233, 237, 244, 0.7);
+}
+
+.raport__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Nawigator dzienny (kalendarz) ----------------------------------- */
+.daynav {
+  flex: none;
+  width: 158px;
+  border-right: var(--bw) solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-deep);
+  box-shadow: 0 0px 50px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+/* Nakładka archiwum: poza obszarem scrolla, zawsze widoczna na górze */
+.daynav__arch {
+  flex: none;
+  border-bottom: var(--bw) solid var(--oczekujace);
+  background: linear-gradient(180deg, rgba(255, 180, 0, 0.16), rgba(255, 180, 0, 0.06));
+  color: #ffce5c;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 10px;
+  text-align: center;
+  cursor: pointer;
+  animation: archpulse 1.4s ease-in-out infinite;
+  z-index: 5;
+  position: relative;
+}
+@keyframes archpulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 180, 0, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 180, 0, 0); }
+}
+/* Scrollowalny kontener dat — wewnątrz daynav */
+.daynav__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.daynav__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.daynav__day {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 9px;
+  cursor: pointer;
+  color: var(--text-faint);
+  border: var(--bw) solid transparent;
+  transition: color 0.15s, background 0.15s;
+}
+.daynav__day:hover { color: var(--text-muted); background: rgba(255,255,255,.04); }
+.daynav__dow { font-family: var(--font-display); font-size: 13px; font-weight: 600; }
+.daynav__date { font-size: 11px; font-variant-numeric: tabular-nums; }
+.daynav__day.is-active {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-card);
+}
+.daynav__day.is-active .daynav__dow { font-size: 15px; font-weight: 800; }
+.daynav__day.is-today:not(.is-active) .daynav__dow { color: var(--accent); }
+.daynav__day.is-today .daynav__date::after { content: " • dziś"; color: var(--accent); font-weight: 700; text-shadow: 0 0 8px rgba(39, 211, 168, 0.35); }
+.daynav__home {
+  margin-top: auto;
+  border: var(--bw) solid var(--border-strong);
+  background: var(--panel);
+  padding: 8px;
+  font-weight: 600;
+  font-size: 12px;
+}
+.daynav__home:hover { background: var(--panel-2); }
+
+/* --- Pasek filtrów — pełna szerokość --------------------------------- */
+.board__bar {
+  flex: none;
+  padding: 12px 16px 10px;
+  border-bottom: var(--bw) solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  box-shadow: 0px 0px 50px rgba(0, 0, 0, 0.5);
+  background: var(--panel);
+}
+.filters {display: flex;align-items: center;gap: 16px;flex-wrap: wrap;}
+
+/* Pole wyszukiwania eksponatu */
+.card-search {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: var(--bw) solid var(--border);
+  background: var(--field);
+  padding: 3px 8px;
+  flex: 0 0 220px;
+  cursor: text;
+}
+.card-search:focus-within,
+.card-search.is-open { border-color: var(--accent); background: var(--bg-deep); box-shadow: 0 0 0 3px var(--accent-soft); }
+.card-search__ico { font-size: 12px; flex: none; }
+.card-search__inp {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  color: var(--text);
+  width: 100%;
+}
+.card-search__inp::placeholder { color: var(--text-muted); }
+.card-search__inp::-webkit-search-cancel-button { cursor: pointer; }
+.card-search__dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: -2px;
+  right: -2px;
+  z-index: 200;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--panel);
+  border: var(--bw) solid var(--border-strong);
+  box-shadow: 0 14px 34px rgba(0,0,0,.6);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.card-search__item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.card-search__item:last-child { border-bottom: none; }
+.card-search__item:hover { background: var(--panel-2); }
+.card-search__item-name { font-size: 12.5px; font-weight: 600; color: var(--text); }
+.card-search__item-w { font-size: 10.5px; color: var(--text-muted); }
+
+.filters__lbl {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  flex: none;
+}
+
+
+/* Filtry wystaw: spójny ciemny chip z kolorowym akcentem wystawy.
+ * Nieaktywne mają JEDNOLITY jasny tekst (koniec z mieszanką biały/czarny);
+ * aktywny (jeden naraz) wypełnia się kolorem wystawy z czytelnym tekstem. */
+.wfilter {
+  position: relative;
+  border: var(--bw) solid var(--border);
+  border-top: 4px solid var(--wcolor); /* akcent wystawy na górnej krawędzi — spójnie z tabami */
+  background: var(--panel-2);
+  color: var(--text-muted);
+  padding: 6px 15px 7px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--shadow-btn);
+  transition: color 0.15s, background 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.wfilter:hover {
+  color: var(--text);
+  background: #2c3543;
+  border-color: var(--border-strong);
+  border-top-color: var(--wcolor);
+}
+.wfilter.is-active {
+  background: var(--wcolor);
+  color: #f4f6fa; /* jednolity jasny tekst niezależnie od koloru wystawy */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55), 0 1px 1px rgba(0, 0, 0, 0.35);
+  border-color: var(--wcolor);
+  font-weight: 700;
+  overflow: hidden; /* przycina pasek shimmeru (::after) do kształtu przycisku */
+  --ag-base: var(--shadow-soft), 0 0 16px -2px var(--wcolor);
+  --glowc: var(--wcolor);
+  box-shadow: var(--ag-base);
+  animation: activeGlowPulse 3.6s ease-in-out infinite;
+}
+.wfilter.is-active::after {
+  content: "";
+  position: absolute;
+  top: -50%; left: -20%; width: 30%; height: 200%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  pointer-events: none;
+  animation: activeShimmerSweep 3.6s ease-in-out infinite;
+}
+
+/* Filtry stanów: kolorowe tła; włączone domyślnie (toggle) */
+.sfilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: var(--bw) solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  box-shadow: var(--shadow-btn);
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+/* Filtry stanu eksponatu — same kolorowe kwadraty (bez etykiet); kolor inline */
+.sfilter--sq {
+  width: 18px;
+  height:18px;
+  padding: 0;
+  gap: 0;
+  border-color: rgba(0, 0, 0, 0.25);
+  opacity: 0.5;
+  filter: saturate(0.7);
+  transition: opacity 0.15s, box-shadow 0.15s, transform 0.1s, filter 0.15s;
+}
+.sfilter--sq:hover { opacity: 0.85; }
+.sfilter--sq.is-active {
+  position: relative;
+  overflow: hidden; /* przycina pasek shimmeru (::after) do kształtu kwadratu */
+  opacity: 1;
+  filter: none;
+  --ag-base: var(--shadow-soft), inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+  --glowc: var(--scolor, #fff);
+  box-shadow: var(--ag-base);
+  animation: activeGlowPulse 3.6s ease-in-out infinite;
+}
+.sfilter--sq.is-active::after {
+  content: "";
+  position: absolute;
+  top: -50%; left: -20%; width: 30%; height: 200%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  pointer-events: none;
+  animation: activeShimmerSweep 3.6s ease-in-out infinite;
+}
+.sfilter.is-active { opacity: 1; box-shadow: var(--shadow-soft); }
+.sfilter--toggle { margin-left: auto; background: var(--panel-2); }
+.sfilter--toggle.is-active { border-color: var(--border-strong); background: var(--panel); }
+/* "Historia" tuż obok "Spis Eksponatów" (bez odpychania na prawo) */
+.sfilter--histo { margin-left: 0; gap: 5px; }
+.sfilter--histo i { font-size: 13px; }
+.sfilter__n {
+  background: rgba(0,0,0,.14);
+  padding: 1px 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Delikatne dimowanie podczas ładowania dnia — bez zmiany layoutu */
+.raport__main { transition: opacity 0.12s ease; }
+.raport__main.is-loading { opacity: 0.55; pointer-events: none; }
+
+.board__future {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+/* --- Strip kart ------------------------------------------------------ */
+.cards {
+  position: relative; /* offsetParent dla kart — do liczenia scrollAndFlash niezależnie od zoomu UI */
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: var(--gap);
+  align-items: stretch;
+  padding: 32px 32px 32px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain; /* nie przenoś przewijania na stronę */
+}
+.cards--spis {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  gap: 16px;
+}
+
+/* --- Widok HISTORIA: macierz eksponaty(kolumny) × dni(wiersze) --------- */
+.cards--history {
+  display: block;          /* tabela zamiast pasa flex */
+  overflow: auto;          /* scroll w obie osie (bok=eksponaty, pion=dni) */
+  padding: 0;
+  gap: 0;
+}
+.histo {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.histo th, .histo td {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+/* Nagłówek kolumn = eksponat (sticky góra); same tytuły, klikalne → karta */
+.histo thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 50px;
+  background: var(--panel-2);
+  vertical-align: bottom;
+}
+.histo__exh {
+  min-width: 116px;
+  max-width: 116px;
+  padding: 6px 8px 7px;
+  border-top: 3px solid var(--wcolor);
+  text-align: left;
+}
+.histo__exh--grp { border-left: 3px solid var(--border-strong); }
+.histo__exh-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text);
+  cursor: pointer;
+}
+.histo__exh-name:hover { color: var(--accent); text-decoration: underline; }
+/* Lewa oś = data dnia (sticky lewa) */
+.histo__corner {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  text-align: left;
+}
+.histo__date {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg-deep);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+.histo tbody tr:hover .histo__date { color: var(--text); }
+.histo tbody tr:hover td { background: rgba(255,255,255,.03); }
+/* Wiersz oglądanego dnia (na żywo) — wyróżniony nad historią */
+.histo__row--live .histo__date {
+  color: var(--text);
+  font-weight: 700;
+  border-left: 3px solid var(--accent);
+}
+.histo__row--live td { background: var(--accent-soft); }
+.histo__today { color: var(--accent); font-weight: 700; }
+/* Komórka statusu danego eksponatu w danym dniu */
+.histo__cell {
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+.histo__cell--grp { border-left: 3px solid var(--border-strong); }
+.histo__sq {
+  display: inline-block;
+  width: 18px; height: 18px;
+  vertical-align: middle;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.3);
+}
+.histo__sq--none {
+  width: 6px; height: 6px;
+  background: var(--field);
+  box-shadow: none;
+  opacity: 0.6;
+}
+.histo__empty {
+  padding: 28px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Grupy wystawy w trybie zwiniętym */
+.card-group {
+  position: relative;
+  border: 2px solid var(--wcolor);
+  padding: 20px 10px 10px;
+  flex: 0 0 auto;
+  box-shadow: 0 0 12px -4px var(--wcolor);
+}
+.card-group__lbl {
+  position: absolute;
+  top: -9px; left: 10px;
+  background: var(--bg);
+  padding: 0 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--wcolor);
+  white-space: nowrap;
+}
+.card-group__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Czytelny dolny scrollbar pasa kart */
+.cards::-webkit-scrollbar { height: 15px; }
+.cards::-webkit-scrollbar-track { background: var(--bg-deep); border-top: var(--bw) solid var(--border); }
+.cards::-webkit-scrollbar-thumb {
+  background: #7e7e86;
+  border: 3px solid var(--bg-deep);
+  min-width: 60px;
+}
+.cards::-webkit-scrollbar-thumb:hover { background: #5f5f67; }
+.cards { scrollbar-color: #7e7e86 var(--bg-deep); } /* Firefox */
+
+@keyframes cardflash {
+  0%   { transform: translateY(0);     outline: 3px solid transparent; }
+  22%  { transform: translateY(-12px); outline: 3px solid #ffd000; box-shadow: 0 18px 32px rgba(255,208,0,.45); }
+  50%  { transform: translateY(4px);   outline: 3px solid #ffd000; }
+  70%  { transform: translateY(-5px);  outline: 3px solid rgba(255,208,0,.5); }
+  88%  { transform: translateY(2px);   outline: 3px solid rgba(255,208,0,.15); }
+  100% { transform: translateY(0);     outline: 3px solid transparent; }
+}
+.card.card--flash {
+  animation: cardflash 0.72s ease-in-out forwards;
+  position: relative;
+  z-index: 5; /* wyższa specyficzność niż .card { z-index: 0 } — wygrywa niezależnie od kolejności w pliku */
+}
+
+.card {
+  position: relative;
+  z-index: 0; /* własny kontekst stackingu — card__bgphoto (z-index:-1) zostaje pod treścią, w obrębie karty */
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden; /* przycina card__bgphoto do obrysu karty */
+  /* Pasek wystawy: skośny gradient (baza → 15% jaśniej) namalowany w border-box pod
+   * przezroczystym border-top — reszta karty to zwykłe tło paneli w padding-box. */
+  background:
+    linear-gradient(100deg, var(--wcolor), color-mix(in srgb, var(--wcolor) 85%, white 15%)) top / 100% 32px no-repeat border-box,
+    linear-gradient(180deg, var(--panel), var(--card-grad-end)) no-repeat padding-box;
+  border: var(--bw) solid var(--border);
+  border-top: 32px solid transparent; /* identyfikator wystawy — miejsce na gradientowy pasek z tła */
+  padding: 12px;
+  box-shadow: var(--lift);
+  transition: box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.card:hover {
+  border-color: var(--accent-line);
+  border-top-color: transparent; /* pasek wystawy (gradient w tle) zostaje widoczny nawet po hoverze */
+  box-shadow: var(--lift-hover);
+}
+/* Powtórzone zdjęcie okładki jako subtelne tło pustej przestrzeni na dole karty —
+ * przygaszone i maskowane od góry gradientem, żeby wtapiało się w tło karty. */
+.card__bgphoto {
+  position: absolute;
+  z-index: -1;
+  left: 0; right: 0; bottom: 0;
+  height: 20%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.3;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 55%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 55%);
+}
+.card__mini {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  width: 210px;
+  padding: 3px 6px;
+  transition: background 0.1s;
+}
+.card__mini:hover { background: rgba(255,255,255,.05); }
+.card__mini:hover .card__mini-name { text-decoration: underline; }
+.card__mini-sq { width: 15px; height: 15px; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+.card__mini-name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.card__head {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: var(--bw) solid var(--border);
+}
+.card__titles { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.card__wystawa { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.card__title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: var(--text);
+}
+/* Inline-edycja tytułu eksponatu — spójna z innymi polami edycji w aplikacji */
+.card__title-edit {
+  width: 100%;
+  border: var(--bw) solid var(--accent);
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.card__thumb {
+  width: 64px; height: 64px; flex: none;
+  overflow: hidden;
+  background: var(--field);
+  border: var(--bw) solid var(--border);
+  display: grid; place-items: center;
+}
+.card__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card__thumb-ph { font-size: 9px; color: var(--text-faint); text-align: center; line-height: 1.2; }
+
+/* Pole "Inny status" — duże, wypełnia kartę (przycisk ląduje na dole) */
+.card__inny {
+  flex: 1;
+  min-height: 96px;
+  width: 100%;
+  resize: none;
+  border: var(--bw) solid var(--border);
+  background: var(--field);
+  padding: 9px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  font-family: var(--font-body);
+}
+.card__inny:focus { outline: none; border-color: var(--accent); background: var(--bg-deep); box-shadow: 0 0 0 3px var(--accent-soft); }
+.card__inny:disabled { opacity: 0.7; }
+
+.card__media { display: flex; flex-direction: column; gap: 7px; }
+.card__media-thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.card__media-thumbs img { width: 46px; height: 46px; object-fit: cover; border: var(--bw) solid var(--border); }
+
+/* Kwadraty stanu — lista wertykalna na górze karty (pod nagłówkiem) */
+.card__states {display: flex;flex-direction: column;gap: 12px;}
+.cstate {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  text-align: left;
+  cursor: pointer;
+}
+.cstate:hover { background: var(--panel-2); }
+.cstate__sq {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3);
+  opacity: 0.4;
+  filter: saturate(0.6);
+  transition: opacity 0.14s, box-shadow 0.14s, transform 0.1s, filter 0.14s;
+}
+.cstate__lbl {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--text-faint);
+  transition: color 0.14s;
+}
+.cstate:hover .cstate__sq { opacity: 0.75; }
+.cstate.is-on .cstate__sq {
+  opacity: 1;
+  filter: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+.cstate.is-on .cstate__lbl { color: var(--text); font-weight: 700; }
+.cstate.is-disabled { cursor: default; }
+.cstate.is-disabled:hover { background: none; }
+.cstate.is-disabled:hover .cstate__sq { opacity: 0.4; }

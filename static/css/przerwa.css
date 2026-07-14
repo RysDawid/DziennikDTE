@@ -1,0 +1,217 @@
+/* ====================================================================== *
+ * TAB Przerwa techniczna — nowy, bardziej dynamiczny typ karty:
+ * pasek statusu + fullscreen, modularna lista "updates" z elementami
+ * (opis/link/media/kontakt/cena), przeciąganymi względem siebie.
+ * Reużywa .karta__head / .karta__title / .karta__footer / .drag-handle / .btn-final
+ * z karty.css dla spójności nagłówka i stopki z resztą aplikacji.
+ * ====================================================================== */
+
+.pcard {
+  position: relative;
+  flex: 0 0 380px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  background: linear-gradient(180deg, var(--panel), var(--card-grad-end));
+  border: var(--bw) solid var(--border-strong);
+  box-shadow: var(--lift);
+  overflow: hidden;
+  transition: box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.pcard:hover { border-color: var(--accent-line); box-shadow: var(--lift-hover); }
+
+/* Pasek statusu — pełna szerokość, kolor zależny od --pstatus (aktywne/oczekujące) */
+.pcard__stripe {
+  position: relative;
+  flex: none;
+  height: 22px;
+  background: var(--pstatus);
+}
+.pcard__full-btn {
+  position: absolute;
+  top: 50%; right: 9px; transform: translateY(-50%);
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border: none;
+  background: none;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  opacity: 0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+/* Widoczny tylko na hover karty — w trybie pełnoekranowym (przycisk zamknij) zawsze widoczny */
+.pcard:hover .pcard__full-btn,
+.pcard--full .pcard__full-btn { opacity: 1; }
+.pcard__full-btn:hover { transform: translateY(-50%) scale(1.15); }
+
+/* Okładka karty — opcjonalne zdjęcie w tle nagłówka (.karta__head), na wzór
+ * kart eksponatów (.card__bgphoto w raport.css): gradient góra→dół, ciemno
+ * (czytelny tytuł) przechodzące w przezroczyste (foto wchodzi od dołu).
+ * Kontener rośnie z ~46px do ~185px (+300%), treść (flaga/tytuł/uchwyt)
+ * zostaje przy górnej krawędzi. Tło (gradient + zdjęcie) ustawiane inline
+ * przez coverStyle() w ModularCard.js — samo zdjęcie jest per-karta. */
+.pcard .karta__head--cover {
+  min-height: 185px;
+  align-items: flex-start;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Ciało: lista update'ów — najnowszy na górze, reszta scrolluje się w dół */
+.pcard__updates {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.pcard__empty {
+  padding: 24px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* Załączniki — karta-poziomowe (jak okładka), nad listą update'ów.
+ * .attach-item/.attach-list zdefiniowane w karty.css (współdzielone z kartami klasycznymi). */
+.pcard__attach {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border-bottom: var(--bw) solid var(--border);
+}
+
+/* Jeden "update" */
+.pupd {
+  flex: none;
+  border-bottom: var(--bw) solid var(--border);
+  padding: 10px 12px 12px;
+}
+.pupd__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pupd__cal {
+  flex: none;
+  font-size: 16px;
+  opacity: 0.75;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0 3px;
+  color: var(--text);
+  transition: opacity 0.12s;
+}
+.pupd__cal:hover { opacity: 1; }
+.pupd__date {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Elementy update'u — przeciągane względem siebie (Sortable per-update) */
+.pupd__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pel {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: var(--bw) solid var(--border);
+  background: var(--field);
+  padding: 7px 9px;
+}
+.pel__handle {
+  flex: none;
+  align-self: center;
+}
+.pel__ico {
+  flex: none;
+  font-size: 18px;
+  opacity: 0.85;
+  cursor: context-menu;
+  user-select: none;
+  color: var(--text-muted);
+}
+.pel__txt {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 4px 2px;
+  resize: none;
+  min-height: 22px;
+  outline: none;
+}
+.pel__inp {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: 5px 2px;
+  outline: none;
+}
+.pel--link .pel__inp { color: var(--accent); }
+.pel--cena .pel__inp { font-weight: 700; }
+.pel__open {
+  flex: none;
+  align-self: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 15px;
+  padding: 2px;
+}
+.pel__open:hover { color: var(--accent); }
+
+.pel__media { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.pel__media img {
+  width: 46px; height: 46px;
+  object-fit: cover;
+  border: var(--bw) solid var(--border);
+  cursor: pointer;
+}
+.pel__mediaBtn { width: auto; padding: 6px 10px; font-size: 11px; }
+
+
+/* ---- Fullscreen: "wątek na forum" — ta sama karta, powiększona w overlayu ---- */
+.pcard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: rgba(8, 10, 16, 0.55);
+  backdrop-filter: blur(10px) saturate(0.9);
+  -webkit-backdrop-filter: blur(10px) saturate(0.9);
+}
+.pcard--full {
+  flex: none;
+  width: min(640px, 92vw);
+  max-height: 88vh;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+}
+.pcard--full .pupd { padding: 14px 20px 16px; }
+.pcard--full .pel__txt,
+.pcard--full .pel__inp { font-size: 13.5px; }

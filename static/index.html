@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="DTE CNE" />
+  <title>DTE — Dziennik Techniczno-Eksploatacyjny CNE</title>
+  <link rel="icon" type="image/png" href="/img/logo/logo.png" />
+  <!-- Motyw + zoom z localStorage — zastosowane przed renderem (bez mignięcia) -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("dte-theme") || "dark";
+        document.documentElement.setAttribute("data-theme", t);
+        var z = parseFloat(localStorage.getItem("dte-zoom"));
+        document.documentElement.style.setProperty("--ui-zoom", isNaN(z) ? 1 : z);
+      } catch (e) {}
+    })();
+  </script>
+  <!-- Wszystkie zależności zwendorowane lokalnie w /static/vendor — appka nie zależy
+       od dostępności/certyfikatów zewnętrznych CDN-ów (unpkg, jsdelivr, Google Fonts). -->
+  <link rel="stylesheet" href="/static/css/inter.css" />
+  <!-- Phosphor Icons (regular + fill) -->
+  <link rel="stylesheet" href="/static/vendor/phosphor/regular/style.css" />
+  <link rel="stylesheet" href="/static/vendor/phosphor/fill/style.css" />
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <link rel="stylesheet" href="/static/css/components.css" />
+  <link rel="stylesheet" href="/static/css/raport.css" />
+  <link rel="stylesheet" href="/static/css/karty.css" />
+  <link rel="stylesheet" href="/static/css/przerwa.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "vue": "/static/vendor/vue.esm-browser.prod.js",
+        "fuse": "/static/vendor/fuse.mjs",
+        "sortable": "/static/vendor/sortable.esm.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

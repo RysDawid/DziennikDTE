@@ -1,0 +1,24 @@
+# Real production data (fault reports, orders, projects, daily reports, photos)
+data/
+uploads/
+arch/
+
+# Embedded/portable Python distribution
+.python-embed/
+get-pip.py
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/

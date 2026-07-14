@@ -1,0 +1,807 @@
+/* ====================================================================== *
+ * TAB Problemy + Zakupy — karty problemów / zakupów
+ * Bez zaokrągleń, bordery 2px, Inter.
+ * ====================================================================== */
+
+.cardtab {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Półprzezroczyste tło (kolor bazowy @ .62) — przygasza animowany grid pod spodem */
+  background: rgba(24, 29, 40, 0.62);
+}
+:root[data-theme="light"] .cardtab {
+  background: rgba(233, 237, 244, 0.7);
+}
+
+/* ---- Pasek priorytetów ----------------------------------------------- */
+.cardtab__bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 10px;
+  border-bottom: var(--bw) solid var(--border);
+  background: var(--panel);
+}
+
+.prio-btn {
+  border: var(--bw) solid rgba(0,0,0,.22);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 16px;
+  opacity: 0.48;
+  box-shadow: var(--shadow-btn);
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+.prio-btn:hover  { opacity: 0.75; }
+.prio-btn.is-active {
+  position: relative;
+  overflow: hidden; /* przycina pasek shimmeru (::after) do kształtu przycisku */
+  opacity: 1;
+  --ag-base: var(--shadow-soft);
+  box-shadow: var(--ag-base);
+  animation: activeGlowPulse 3.6s ease-in-out infinite;
+}
+.prio-btn.is-active::after {
+  content: "";
+  position: absolute;
+  top: -50%; left: -20%; width: 30%; height: 200%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  pointer-events: none;
+  animation: activeShimmerSweep 3.6s ease-in-out infinite;
+}
+/* Jednolity jasny tekst niezależnie od koloru priorytetu — spójnie z filtrami wystaw */
+.prio-btn--pilne, .prio-btn--oczekujace, .prio-btn--przyszlosc {
+  color: #f4f6fa;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55), 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+.prio-btn--pilne      { background: var(--pilne); }
+.prio-btn--oczekujace { background: var(--oczekujace); }
+.prio-btn--przyszlosc { background: var(--przyszlosc); }
+.prio-btn--pilne.is-active      { --glowc: var(--pilne); }
+.prio-btn--oczekujace.is-active { --glowc: var(--oczekujace); }
+.prio-btn--przyszlosc.is-active { --glowc: var(--przyszlosc); }
+
+.prio-add {
+  border: var(--bw) solid var(--border);
+  background: var(--panel-2);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-btn);
+  transition: box-shadow 0.15s;
+}
+.prio-add:hover { background: var(--field); box-shadow: var(--shadow-soft); }
+
+/* Przycisk „Historia" po prawej stronie paska — wysuwa boczny panel archiwum. */
+.hist-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: var(--bw) solid var(--border);
+  background: var(--panel-2);
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 7px 14px;
+  height: 32px;
+  box-shadow: var(--shadow-btn);
+  transition: color 0.15s, background 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.hist-btn i { font-size: 16px; }
+.hist-btn:hover { background: var(--field); color: var(--text); box-shadow: var(--shadow-soft); }
+.hist-btn.is-active {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--field);
+  box-shadow: var(--shadow-soft);
+}
+/* Licznik zarchiwizowanych kart w tej kolekcji */
+.hist-btn__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--accent);
+  color: #08131a;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Obszar roboczy pod paskiem — kontekst pozycjonowania dla wysuwanego panelu Historii. */
+.cardtab__main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.cardtab__main > .cardtab__strip { flex: 1; }
+
+/* ---- Strip kart --------------------------------------------------------
+ * Własna ramka + margines odsuwający od cienkiej krawędzi .workspace —
+ * karty scrollują wewnątrz wyraźnie „zabudowanej" tacki, a nie gołej ramki. */
+.cardtab__strip {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: var(--gap);
+  margin: 14px;
+  padding: 20px 20px 12px;
+  border: var(--bw) solid var(--border);
+  background: rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.28);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+}
+:root[data-theme="light"] .cardtab__strip {
+  background: rgba(0, 0, 0, 0.035);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.cardtab__strip::-webkit-scrollbar { height: 15px; }
+.cardtab__strip::-webkit-scrollbar-track { background: var(--bg-deep); border-top: var(--bw) solid var(--border); }
+.cardtab__strip::-webkit-scrollbar-thumb {
+  background: #7e7e86;
+  border: 3px solid var(--bg-deep);
+  min-width: 60px;
+}
+.cardtab__strip::-webkit-scrollbar-thumb:hover { background: #5f5f67; }
+.cardtab__strip { scrollbar-color: #7e7e86 var(--bg-deep); }
+
+/* ---- Karta ------------------------------------------------------------ */
+.karta {
+  position: relative;
+  flex: 0 0 370px;
+  display: flex;
+  flex-direction: column;
+  /* Pasek priorytetu: skośny gradient (baza → 15% jaśniej) w border-box pod przezroczystym
+   * border-top — spójnie z paskiem wystawy w Raporcie; reszta karty to zwykłe tło paneli. */
+  background:
+    linear-gradient(100deg, var(--prio), color-mix(in srgb, var(--prio) 85%, white 15%)) top / 100% 18px no-repeat border-box,
+    linear-gradient(180deg, var(--panel), var(--card-grad-end)) no-repeat padding-box;
+  border: var(--bw) solid var(--border-strong);
+  border-top: 18px solid transparent; /* identyfikator priorytetu — miejsce na gradientowy pasek z tła */
+  box-shadow: var(--lift);
+  overflow: hidden;
+  transition: box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.karta:not(.karta--add):hover {
+  border-color: var(--accent-line);
+  border-top-color: transparent; /* pasek priorytetu (gradient w tle) zostaje widoczny nawet po hoverze */
+  box-shadow: var(--lift-hover);
+}
+
+/* Placeholder „Dodaj" */
+.karta--add {
+  flex: 0 0 370px;
+  border: var(--bw) dashed var(--border) !important;
+  box-shadow: none;
+  background: var(--bg-deep);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  /* max-height: 200px; */
+  gap: 10px;
+  cursor: pointer;
+  color: var(--text-faint);
+  transition: color 0.15s, background 0.15s;
+  user-select: none;
+  opacity: 0.7;
+}
+.karta--add:hover { background: var(--panel-2); color: var(--text-muted); }
+.karta-add__plus { font-size: 36px; font-weight: 200; line-height: 1; }
+.karta-add__lbl  { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-align: center; }
+
+/* Nagłówek karty — neutralny pasek; kolor priorytetu na pasku u góry karty (patrz .karta) */
+.karta__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  background: var(--panel-2);
+  border-bottom: var(--bw) solid var(--border);
+  color: var(--text);
+}
+.karta__ico-status {
+  flex: none;
+  font-size: 15px;
+  opacity: 0.75;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0 3px;
+  color: inherit;
+  font-family: inherit;
+  line-height: 1;
+  transition: opacity 0.12s;
+}
+.karta__ico-status:hover { opacity: 1; }
+.karta__title {
+  flex: 1;
+  min-width: 0;
+  border: var(--bw) solid transparent;
+  background: transparent;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--text);
+  padding: 6px 9px;
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: box-shadow 0.15s, border-color 0.15s, background 0.15s;
+}
+.karta__title:focus {
+  border-color: var(--accent);
+  background: var(--bg-deep);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  white-space: normal;
+  overflow: visible;
+}
+.drag-handle {
+  flex: none;
+  align-self: center;
+  cursor: grab;
+  width: 10px;
+  height: 16px;
+  opacity: 0.55;
+  user-select: none;
+  color: inherit;
+  /* 6 kółeczek (2 kolumny × 3 rzędy) rysowane CSS — niezależne od fontu ikon */
+  background-image:
+    radial-gradient(circle 1.6px at 2.5px 3px,  currentColor 99%, transparent 100%),
+    radial-gradient(circle 1.6px at 7.5px 3px,  currentColor 99%, transparent 100%),
+    radial-gradient(circle 1.6px at 2.5px 8px,  currentColor 99%, transparent 100%),
+    radial-gradient(circle 1.6px at 7.5px 8px,  currentColor 99%, transparent 100%),
+    radial-gradient(circle 1.6px at 2.5px 13px, currentColor 99%, transparent 100%),
+    radial-gradient(circle 1.6px at 7.5px 13px, currentColor 99%, transparent 100%);
+  background-repeat: no-repeat;
+  transition: opacity 0.12s;
+}
+.drag-handle:hover { opacity: 0.9; }
+.drag-handle:active { cursor: grabbing; }
+
+/* Ciało karty — scrollowalny obszar treści */
+.karta__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  overflow-y: auto;
+}
+
+/* Wiersz z ikoną */
+.krow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.krow__ico {
+  flex: none;
+  font-size: 14px;
+  line-height: 1;
+  margin-top: 9px;
+  opacity: 0.8;
+}
+.krow__cnt { flex: 1; min-width: 0; }
+
+/* Galeria (Problemy) */
+.karta__gallery { display: flex; flex-direction: column; gap: 6px; }
+.karta__gallery-main {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border: var(--bw) solid var(--border);
+  display: block;
+  cursor: pointer;
+}
+.karta__thumbs { display: flex; gap: 5px; flex-wrap: wrap; }
+.karta__thumbs img {
+  width: 54px; height: 54px;
+  object-fit: cover;
+  border: var(--bw) solid var(--border);
+  cursor: pointer;
+}
+/* Dokładnie 2 zdjęcia — obok siebie, po połowie szerokości (3+ zdjęć nadal
+ * używa .karta__gallery-main + .karta__thumbs powyżej). */
+.karta__gallery-pair { display: flex; gap: 6px; }
+.karta__gallery-pair img {
+  flex: 1;
+  min-width: 0;
+  height: 150px;
+  object-fit: cover;
+  border: var(--bw) solid var(--border);
+  cursor: pointer;
+}
+
+/* Załączniki (dowolne pliki) — wspólne dla kart klasycznych i modularnych.
+ * Prawy klik / przytrzymaj na wierszu → usuń (jak wiadomości czatu / elementy pel). */
+.attach-list { display: flex; flex-direction: column; gap: 5px; }
+.attach-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: var(--bw) solid var(--border);
+  background: var(--field);
+  padding: 6px 8px;
+  transition: border-color 0.13s, background 0.13s;
+}
+.attach-item:hover { border-color: var(--accent-line); }
+.attach-item__ico { flex: none; font-size: 16px; color: var(--text-muted); }
+.attach-item__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attach-item__size { flex: none; font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.attach-item__dl {
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border: var(--bw) solid var(--border);
+  background: var(--panel-2);
+  color: var(--text-muted);
+  font-size: 13px;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.attach-item__dl:hover { color: var(--accent); border-color: var(--accent-line); background: var(--field); }
+
+/* Opis — zawsze pełna szerokość karty, niezależnie od długości treści */
+.karta__opis {
+  width: 100%;
+  max-width: 100%;
+  min-height: 72px;
+  max-height: 320px;
+  resize: none;
+  border: var(--bw) solid var(--border);
+  background: var(--field);
+  padding: 8px 9px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  font-family: var(--font-body);
+}
+.karta__opis:focus { outline: none; border-color: var(--accent); background: var(--bg-deep); box-shadow: 0 0 0 3px var(--accent-soft); }
+.karta__opis--tall { min-height: 140px; }
+
+/* Chat — .krow jak każdy inny wiersz (ikona po lewej, treść po prawej);
+ * dodatkowo oddzielona od reszty ciała karty górną linią. */
+.karta__chat {
+  border-top: var(--bw) solid var(--border);
+  padding-top: 8px;
+}
+.karta__chat .krow__cnt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chat-msgs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 160px;
+  min-height: 24px;
+  overflow-y: auto;
+}
+.chat-msg { display: flex; flex-direction: column; max-width: 88%; }
+.chat-msg--warsztat { align-self: flex-start; }
+.chat-msg--biuro    { align-self: flex-end; align-items: flex-end; }
+.chat-bubble {
+  padding: 7px 10px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  border: var(--bw) solid rgba(0,0,0,.1);
+}
+.chat-msg--warsztat .chat-bubble { background: var(--chat-warsztat); color: var(--stan-problem-ink); }
+.chat-msg--biuro    .chat-bubble { background: var(--chat-biuro);    color: #fff; }
+.chat-bubble { cursor: default; }
+.chat-ts { font-size: 9.5px; color: var(--text-faint); padding: 2px 3px; }
+.chat-edited { font-style: italic; opacity: 0.85; }
+
+/* Wiadomość usunięta — ślad zamiast treści, niezależnie od koloru autora */
+.chat-msg--warsztat .chat-bubble.chat-bubble--deleted,
+.chat-msg--biuro    .chat-bubble.chat-bubble--deleted {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--border);
+  color: var(--text-faint);
+}
+.chat-deleted-lbl { display: inline-flex; align-items: center; gap: 5px; font-style: italic; }
+.chat-deleted-lbl i { font-size: 12px; }
+
+/* Edycja wiadomości czatu (inline) */
+.chat-edit { display: flex; align-items: center; gap: 4px; width: 100%; }
+.chat-edit__inp {
+  flex: 1;
+  min-width: 0;
+  border: var(--bw) solid var(--accent);
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  padding: 6px 8px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.chat-edit__btn {
+  flex: none;
+  width: 26px; height: 26px;
+  border: var(--bw) solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.13s, border-color 0.13s, color 0.13s;
+}
+.chat-edit__btn:hover { background: var(--field); }
+.chat-edit__btn--ok     { border-color: var(--stan-ok-edge); color: var(--stan-ok); }
+.chat-edit__btn--ok:hover     { background: var(--stan-ok);     color: var(--stan-ok-ink); }
+.chat-edit__btn--cancel { border-color: var(--pilne-edge); color: var(--pilne); }
+.chat-edit__btn--cancel:hover { background: var(--pilne);   color: var(--pilne-ink); }
+
+.chat-reply {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.chat-input {
+  flex: 1;
+  border: var(--bw) solid var(--border);
+  background: var(--field);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  outline: none;
+  min-width: 0;
+}
+.chat-input:focus { border-color: var(--accent); background: var(--bg-deep); box-shadow: 0 0 0 3px var(--accent-soft); }
+.chat-send {
+  flex: none;
+  border: var(--bw) solid var(--border);
+  background: var(--panel-2);
+  color: var(--text); /* ikona samolotu gubiła się bez jawnego koloru (domyślny UA-color przycisku) */
+  width: 26px; height: 26px;
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-btn);
+  transition: box-shadow 0.12s;
+}
+.chat-send:hover { background: var(--field); box-shadow: var(--shadow-soft); }
+
+/* Stopka karty */
+.karta__footer {
+  flex: none;
+  padding: 10px 12px;
+  border-top: var(--bw) solid var(--border);
+}
+/* Stopka karty zarchiwizowanej (podgląd w panelu Historii) — bez przycisku, sama data zamknięcia. */
+.karta__footer--closed {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--panel-2);
+}
+.karta__footer--closed i { font-size: 15px; opacity: 0.85; }
+
+/* ====================================================================== *
+ * Panel HISTORII — wysuwany z prawej boczny panel zamkniętych (archiwalnych) kart
+ * ====================================================================== */
+.histpanel {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  width: min(370px, 82%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  border: var(--bw) solid var(--border-strong);
+  box-shadow: -14px 0 40px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="light"] .histpanel { box-shadow: -14px 0 40px rgba(0, 0, 0, 0.16); }
+
+.histpanel__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: var(--bw) solid var(--border);
+  background: var(--panel-2);
+}
+.histpanel__title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--text);
+}
+.histpanel__title i { font-size: 19px; color: var(--accent); }
+.histpanel__x {
+  flex: none;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border: var(--bw) solid var(--border);
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 15px;
+  transition: color 0.12s, background 0.12s;
+}
+.histpanel__x:hover { color: var(--text); background: var(--field); }
+
+/* Wyszukiwarka archiwum */
+.histpanel__search {
+  flex: none;
+  padding: 11px 12px;
+  border-bottom: var(--bw) solid var(--border);
+  background: rgba(0, 0, 0, 0.1);
+}
+:root[data-theme="light"] .histpanel__search { background: rgba(0, 0, 0, 0.03); }
+.histpanel__searchrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: var(--bw) solid var(--border);
+  background: var(--field);
+  padding: 0 9px;
+}
+.histpanel__searchrow > i { font-size: 15px; color: var(--text-faint); flex: none; }
+.histpanel__searchrow input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 8px 0;
+  outline: none;
+}
+.histpanel__clear {
+  flex: none;
+  border: none; background: transparent;
+  color: var(--text-faint); font-size: 13px; cursor: pointer; padding: 2px;
+}
+.histpanel__clear:hover { color: var(--text); }
+.histpanel__scopes {
+  display: flex;
+  gap: 16px;
+  margin-top: 9px;
+  padding-left: 2px;
+}
+.histpanel__scopes label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.histpanel__scopes input { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+
+/* Lista zamkniętych kart (pionowy scroll, najnowsze u góry) */
+.histpanel__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px 16px;
+}
+.histpanel__empty {
+  padding: 26px 10px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
+.histgroup { margin-bottom: 14px; }
+.histgroup__date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 2px 2px 7px;
+  border-bottom: var(--bw) solid var(--border);
+  margin-bottom: 8px;
+}
+/* Licznik zamkniętych wątków w danym dniu */
+.histgroup__count {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 16px;
+  padding: 0 5px;
+  background: var(--panel-2);
+  border: var(--bw) solid var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.histitem {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border: var(--bw) solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  margin-bottom: 7px;
+  box-shadow: var(--shadow-btn);
+  transition: border-color 0.13s, background 0.13s, box-shadow 0.13s, transform 0.13s;
+}
+.histitem:hover {
+  border-color: var(--accent-line);
+  background: var(--field);
+  box-shadow: var(--shadow-soft);
+  transform: translateX(-2px);
+}
+.histitem.is-open { border-color: var(--accent); background: var(--field); }
+.histitem__open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 9px 4px 9px 11px;
+}
+.histitem__time {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 38px;
+}
+.histitem__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.histitem__arr { flex: none; align-self: center; font-size: 14px; color: var(--text-faint); padding-right: 11px; }
+.histitem:hover .histitem__arr { display: none; }
+/* Akcje wpisu (przywróć / usuń trwale) — widoczne na hover wpisu. */
+.histitem__act {
+  flex: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  align-self: stretch;
+  border: none;
+  border-left: var(--bw) solid var(--border);
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 15px;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.histitem:hover .histitem__act { display: flex; }
+.histitem__restore:hover { color: #08131a; background: var(--accent); }
+.histitem__del:hover { color: #fff; background: var(--pilne); }
+
+/* Wysuw panelu z prawej */
+.histslide-enter-active, .histslide-leave-active { transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease; }
+.histslide-enter-from, .histslide-leave-to { transform: translateX(calc(100% + 14px)); opacity: 0.4; }
+
+/* ---- Lightbox: pełny podgląd zarchiwizowanej karty ------------------- */
+.hist-overlay { z-index: 3000; }
+.histfade-enter-active, .histfade-leave-active { transition: opacity 0.2s ease; }
+.histfade-enter-from, .histfade-leave-to { opacity: 0; }
+
+/* Klasyczna karta (Problemy/Zakupy/Eksploatacja) w trybie podglądu — wyśrodkowana,
+ * przewijalna, wierny wygląd karty, ale bez pól edycji. */
+.hist-cardview {
+  flex: none;
+  width: min(560px, 92vw);
+  max-height: 88vh;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+}
+.hist-cardview .karta__body { overflow-y: auto; }
+.hist-cardview__title {
+  cursor: default;
+  white-space: normal;
+  overflow: visible;
+}
+.hist-cardview__x {
+  flex: none;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border: var(--bw) solid var(--border);
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 14px;
+  transition: color 0.12s, background 0.12s;
+}
+.hist-cardview__x:hover { color: var(--text); background: var(--field); }
+/* Wartości „tylko do odczytu" w podglądzie */
+.hist-ro-val {
+  font-size: 13px;
+  color: var(--text);
+  padding-top: 3px;
+}
+.hist-ro-desc {
+  white-space: pre-wrap;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text);
+  border: var(--bw) solid var(--border);
+  background: var(--field);
+  padding: 8px 9px;
+}
+
+/* Akcje w lightboxie podglądu (przywróć / usuń trwale) — pływające nad kartą (oba typy kart). */
+.hist-lb-actions {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  display: flex;
+  gap: 10px;
+}
+.hist-lb-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: var(--bw) solid var(--border-strong);
+  background: rgba(20, 24, 32, 0.6);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 14px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.13s, color 0.13s, border-color 0.13s;
+}
+.hist-lb-btn i { font-size: 15px; }
+.hist-lb-restore { border-color: var(--accent-line); color: var(--accent); }
+.hist-lb-restore:hover { background: var(--accent); border-color: var(--accent); color: #08131a; }
+.hist-lb-del { border-color: rgba(239, 77, 90, 0.55); color: #ff9ba3; }
+.hist-lb-del:hover { background: var(--pilne); border-color: var(--pilne); color: #fff; }
