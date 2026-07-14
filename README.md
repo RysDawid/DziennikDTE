@@ -377,3 +377,7 @@ zawsze wysyła **całą** zagnieżdżoną strukturę `updates`, nie granularne d
   w tym środowisku; pamiętaj o `run_in_background`/dedykowanym
   `--user-data-dir`, żeby proces przeżył pojedyncze wywołanie narzędzia i
   nie czytał cache'u z poprzednich sesji).
+
+## Licencja
+
+[Unlicense](LICENSE) — domena publiczna, Dawid Ryś.

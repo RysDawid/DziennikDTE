@@ -2,4 +2,5 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-multipart==0.0.20
 aiofiles==24.1.0
-pillow==10.4.0          # tylko dla optimize_images.py (optymalizacja zdjęć)
+# pillow tylko dla optimize_images.py (optymalizacja zdjęć)
+pillow==10.4.0
