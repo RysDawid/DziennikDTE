@@ -5,35 +5,6 @@ projektem. Zakłada zero wcześniejszej wiedzy o kodzie, ale nie tłumaczy
 podstaw FastAPI/Vue — skupia się na tym, co jest specyficzne dla tego
 repozytorium: strukturę, konwencje, pułapki i domenę.
 
-## ⚠️ Zanim cokolwiek zmienisz
-
-- **To jest żywe narzędzie produkcyjne**, używane codziennie przez personel
-  centrum nauki (CNE). `data/*.json` i `uploads/` to prawdziwe dane
-  użytkowników (zgłoszenia usterek, zamówienia, projekty, raporty dzienne) —
-  nie dane testowe.
-- **Brak repozytorium Git.** Nie ma historii, `git blame`, ani łatwego
-  cofnięcia zmiany. Edycja pliku = trwała zmiana od razu. Bądź ostrożny przy
-  edycjach hurtowych/`sed`; preferuj precyzyjne, pojedyncze zmiany.
-- **Brak testów automatycznych.** Jedyna weryfikacja to ręczne uruchomienie
-  aplikacji (patrz `run.sh`/`run.bat`) i sprawdzenie w przeglądarce
-  (np. headless Chromium + CDP) lub ręczna inspekcja plików JSON.
-- **Katalog projektu jest w Dropboxie** (`.../Dropbox/.../System DTE`).
-  Zmiany w plikach synchronizują się automatycznie na inne komputery. Pliki
-  binarne (obrazy) mają w Dropboxie historię wersji — pliki JSON praktycznie
-  nie (nadpisywane atomowo, patrz `save_json`).
-- **Brak autoryzacji/logowania.** Każdy w sieci LAN, kto ma URL, może
-  wszystko — w tym trwale usuwać karty (`DELETE .../trwale`). Traktuj to jak
-  zaufane, pojedyncze stanowisko/sieć wewnętrzną, nie jak wielodostępny
-  serwis publiczny.
-- **Nigdy nie testuj destrukcyjnych operacji (usuwanie/archiwizacja) na
-  nieznanych danych.** Przed jakimkolwiek `deleteCard`/`archiveCard` w
-  testach zweryfikuj dokładne ID i tytuł karty (odczyt z `data/*.json`), i
-  preferuj archiwizację (odwracalną) nad trwałym usunięciem do sprzątania
-  po sobie. Utworzone przez siebie karty testowe usuwaj przez właściwe
-  REST API (`DELETE /api/{coll}/{id}/trwale`), nie przez ręczną edycję JSON
-  na dysku — backend trzyma kolekcje w pamięci procesu i nadpisze ręczną
-  zmianę przy najbliższym zapisie.
-
 ## Co to za aplikacja
 
 CNE to centrum nauki (interaktywne wystawy/eksponaty dla zwiedzających).
@@ -151,8 +122,6 @@ static/
     raport.css                    Style zakładki Raport dzienny
     inter.css                    @font-face dla lokalnie zwendorowanego fontu Inter
   vendor/                       Zwendorowane zależności (Vue/Sortable/Fuse/Phosphor/Inter)
-
-design/                       Zrzuty ekranu/mockupy referencyjne (nieużywane w runtime)
 ```
 
 ## Backend (`main.py`) — mapa API
