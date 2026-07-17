@@ -74,7 +74,7 @@ nadpisać).
 ## Struktura katalogów
 
 ```
-main.py                    Cały backend (jeden plik, ~700 linii)
+main.py                    Cały backend (jeden plik, ~870 linii)
 requirements.txt
 run.sh / run.bat           Skrypty startowe (tworzą venv, instalują, odpalają)
 optimize_images.py         Ręczna kompresja zdjęć (nie jest częścią serwera)
@@ -114,6 +114,10 @@ static/
       MediaUpload.js             Modal uploadu (drag&drop / paste / aparat)
       ImageModal.js               Lightbox pełnoekranowy z zoom/pan/pinch
       FuzzySelect.js               Dropdown z fuzzy search (Fuse.js)
+      HistoryPanel.js              Panel "Historia" — zarchiwizowane karty kolekcji
+      AttachmentUpload.js          Modal uploadu dowolnych plików (nie tylko zdjęć)
+      ImportArchiwum.js            Modal admina: import data/uploads/arch z zipa
+      GitUpdate.js                 Modal admina: git pull (bez auto-restartu)
   css/
     main.css                    Tokeny (kolory/spacing/cienie), reset, layout appki
     components.css               Style komponentów współdzielonych (menu, upload, modal…)
