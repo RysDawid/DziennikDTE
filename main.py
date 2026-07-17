@@ -829,6 +829,35 @@ async def import_archiwum(request: Request) -> JSONResponse:
     })
 
 
+# ---- Admin: aktualizacja kodu (git pull) ------------------------------------ #
+@app.post("/api/admin/aktualizuj")
+async def git_update() -> JSONResponse:
+    """Pobiera najnowszy kod z gita (git pull --ff-only). NIE restartuje procesu:
+    serwer musi być podniesiony pod nadzorcą procesu (np. systemd), żeby restart
+    faktycznie załadował nowy kod — tego jeszcze nie zakładamy, więc admin musi
+    zrobić to ręcznie. --ff-only: jeśli ktoś commitował lokalnie na serwerze i
+    historia się rozjechała, pull ma jawnie zawieść zamiast tworzyć merge."""
+    try:
+        def _git(*args: str) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                ["git", *args], cwd=BASE, capture_output=True, text=True, timeout=30,
+            )
+        before = _git("rev-parse", "HEAD").stdout.strip()
+        result = _git("pull", "--ff-only")
+        after = _git("rev-parse", "HEAD").stdout.strip()
+    except subprocess.TimeoutExpired:
+        raise HTTPException(504, "git pull nie odpowiedział (timeout) — sprawdź połączenie serwera z internetem")
+    except FileNotFoundError:
+        raise HTTPException(500, "git nie jest zainstalowany na serwerze")
+
+    output = (result.stdout + result.stderr).strip()
+    if result.returncode != 0:
+        raise HTTPException(500, f"git pull nie powiódł się:\n{output}")
+
+    zmieniono = before != after
+    return JSONResponse({"ok": True, "zmieniono": zmieniono, "output": output})
+
+
 # ---- WebSocket ------------------------------------------------------------- #
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket) -> None:
