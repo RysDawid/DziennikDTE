@@ -6,8 +6,9 @@ import { ref } from "vue";
 import { store } from "../store.js";
 
 export default {
+  props: { haslo: { type: String, required: true } },
   emits: ["close"],
-  setup(_, { emit }) {
+  setup(props, { emit }) {
     const file = ref(null);
     const busy = ref(false);
     const result = ref(null); // { zaimportowano, plikow, backup }
@@ -34,6 +35,7 @@ export default {
       try {
         const fd = new FormData();
         fd.append("plik", file.value);
+        fd.append("haslo", props.haslo);
         const res = await fetch("/api/admin/import-archiwum", { method: "POST", body: fd });
         const body = await res.json();
         if (!res.ok) throw new Error(body.detail || `Błąd ${res.status}`);

@@ -8,8 +8,7 @@ import Zakupy from "./tabs/Zakupy.js";
 import PrzerwaTechniczna from "./tabs/PrzerwaTechniczna.js";
 import Projekty from "./tabs/Projekty.js";
 import { PRIO } from "./tabs/cardTab.js";
-import ImportArchiwum from "./components/ImportArchiwum.js";
-import GitUpdate from "./components/GitUpdate.js";
+import TechMenu from "./components/TechMenu.js";
 
 // Zakładki pogrupowane wizualnie (większy odstęp MIĘDZY grupami, zakładki
 // WEWNĄTRZ grupy stykają się jak dotychczas — styl "teczek"). Kolejność grup
@@ -88,14 +87,10 @@ const Clock = {
 // Preferencje per-urządzenie → localStorage. Zoom przez --ui-zoom (CSS zoom na .app-shell);
 // teleport do body, by sam pasek nie skalował się razem z UI.
 const UiControls = {
-  components: { ImportArchiwum, GitUpdate },
   setup() {
     const THEME_KEY = "dte-theme";
     const ZOOM_KEY = "dte-zoom";
     const ZOOM_MIN = 0.6, ZOOM_MAX = 1.5, ZOOM_STEP = 0.1;
-
-    const importOpen = ref(false);
-    const updateOpen = ref(false);
 
     const theme = ref(localStorage.getItem(THEME_KEY) || "dark");
     const z0 = parseFloat(localStorage.getItem(ZOOM_KEY));
@@ -124,7 +119,7 @@ const UiControls = {
 
     const zoomPct = computed(() => Math.round(zoom.value * 100) + "%");
 
-    return { theme, zoomPct, toggleTheme, zoomIn, zoomOut, zoomReset, importOpen, updateOpen };
+    return { theme, zoomPct, toggleTheme, zoomIn, zoomOut, zoomReset };
   },
   template: `
     <Teleport to="body">
@@ -134,20 +129,12 @@ const UiControls = {
           <button class="uictl__pct" @click="zoomReset" title="Resetuj rozmiar (100%)">{{ zoomPct }}</button>
           <button class="uictl__btn" @click="zoomIn" title="Powiększ UI" aria-label="Powiększ UI"><i class="ph-fill ph-plus"></i></button>
         </div>
-        <button class="uictl__btn" @click="importOpen = true" title="Import archiwum (data/uploads/arch z zip)" aria-label="Import archiwum">
-          <i class="ph-fill ph-database"></i>
-        </button>
-        <button class="uictl__btn" @click="updateOpen = true" title="Aktualizacja kodu (git pull)" aria-label="Aktualizacja kodu">
-          <i class="ph-fill ph-cloud-arrow-down"></i>
-        </button>
         <button class="uictl__btn uictl__theme" @click="toggleTheme"
                 :title="theme === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'"
                 :aria-label="theme === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'">
           <i :class="theme === 'dark' ? 'ph-fill ph-sun' : 'ph-fill ph-moon'"></i>
         </button>
       </div>
-      <ImportArchiwum v-if="importOpen" @close="importOpen = false" />
-      <GitUpdate v-if="updateOpen" @close="updateOpen = false" />
     </Teleport>
   `,
 };
@@ -168,8 +155,9 @@ const PlaceholderComp = {
 };
 
 const App = {
-  components: { Clock, UiControls },
+  components: { Clock, UiControls, TechMenu },
   setup() {
+    const techMenuOpen = ref(false);
     // Liczniki priorytetów (pilne/oczekujące/przyszłościowe) na zakładkę — badge'e w tabbarze.
     function prioCounts(coll) {
       return PRIO.map((p) => ({
@@ -208,7 +196,7 @@ const App = {
       () => (activeComp.value === PlaceholderComp ? store.activeTab : undefined)
     );
 
-    return { store, TAB_GROUPS, dots, activeComp, compKey };
+    return { store, TAB_GROUPS, dots, activeComp, compKey, techMenuOpen };
   },
   template: `
     <Transition name="bootfade">
@@ -228,9 +216,12 @@ const App = {
     <div v-else key="app" class="app-shell">
       <UiControls />
       <div class="brand">
-        <img class="brand__logo" src="/img/logo/logo.png" alt="DTE" />
+        <img class="brand__logo" src="/img/logo/logo.png" alt="DTE"
+             style="cursor:pointer" title="Ustawienia techniczne"
+             @click="techMenuOpen = true" />
         <Clock />
       </div>
+      <TechMenu v-if="techMenuOpen" @close="techMenuOpen = false" />
 
       <div class="main-col">
         <nav class="tabbar">

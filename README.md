@@ -71,6 +71,11 @@ agresywny przy plikach JS/CSS ładowanych jako moduły).
 zdjęć w `img/`/`uploads/` (domyślnie dry-run, `--apply` żeby faktycznie
 nadpisać).
 
+**Zmienna środowiskowa `DTE_ADMIN_HASLO`** — hasło do menu technicznego
+(import archiwum, aktualizacja kodu). Bez niej te funkcje są całkowicie
+zablokowane. Ustawia się ją tam, gdzie proces jest uruchamiany (np. linia
+`Environment=DTE_ADMIN_HASLO=...` w pliku systemd) — **nigdy w kodzie/gicie**.
+
 ## Struktura katalogów
 
 ```
@@ -116,8 +121,9 @@ static/
       FuzzySelect.js               Dropdown z fuzzy search (Fuse.js)
       HistoryPanel.js              Panel "Historia" — zarchiwizowane karty kolekcji
       AttachmentUpload.js          Modal uploadu dowolnych plików (nie tylko zdjęć)
+      TechMenu.js                   Bramka hasłem (ukryta pod logo) + menu admina
       ImportArchiwum.js            Modal admina: import data/uploads/arch z zipa
-      GitUpdate.js                 Modal admina: git pull (bez auto-restartu)
+      GitUpdate.js                 Modal admina: git pull + auto pip install + self-restart
   css/
     main.css                    Tokeny (kolory/spacing/cienie), reset, layout appki
     components.css               Style komponentów współdzielonych (menu, upload, modal…)
@@ -163,8 +169,10 @@ Dodanie nowej kolekcji kartowej = dopisanie jej do `COLLECTIONS` (+ ew. do
 
 ### Inne
 - `POST /api/upload/{kontekst}/{owner_id}` — multipart upload, zapisuje do `uploads/{kontekst}/{owner_id}/`, zwraca listę URL-i.
-- `POST /api/admin/import-archiwum` — multipart upload zipa z `data/`/`uploads/`/`arch/` (np. spakowanych ręcznie z instalacji produkcyjnej: `zip -r archiwum.zip data uploads arch`), żeby odtworzyć dane na świeżym klonie (te katalogi nie są w gicie). Waliduje ścieżki wpisów (ochrona przed zip-slip), przenosi bieżącą zawartość podmienianych top-level katalogów do `_backup/<znacznik czasu>/` zamiast ją kasować, przeładowuje kolekcje `data/*.json` w pamięci procesu i rozsyła `WS {channel:"system", action:"restore"}`, żeby inne podłączone karty przeglądarki się przeładowały. UI: przycisk w pasku sterowania (ikona bazy danych obok przełącznika motywu).
-- `POST /api/admin/aktualizuj` — `git pull --ff-only` w katalogu appki. **Nie restartuje procesu** (brak nadzorcy procesu/systemd na razie założonego przy wdrożeniu) — tylko ściąga kod i zwraca info, czy było co ściągać; admin i tak musi ręcznie zrestartować serwer, żeby nowy kod zaczął działać. `--ff-only` celowo nie tworzy merge commitów — jeśli ktoś edytował pliki bezpośrednio na serwerze (lub historia się rozjechała), pull ma jawnie zawieść z czytelnym błędem zamiast czegoś nadpisać. UI: przycisk obok importu archiwum (ikona chmury ze strzałką w dół).
+- `POST /api/admin/auth` — weryfikuje hasło (`{haslo}`) przeciw `DTE_ADMIN_HASLO` (zmienna środowiskowa). Bez ustawionej zmiennej na serwerze funkcje admina są **całkowicie zablokowane**, nie "otwarte domyślnie". Używane przez `TechMenu.js` do odblokowania menu (hasło potem trzymane w `sessionStorage`, wysyłane przy każdym wywołaniu poniższych dwóch endpointów).
+- `POST /api/admin/import-archiwum` — multipart upload zipa (pole `plik`) + `haslo`, z `data/`/`uploads/`/`arch/` (np. spakowanych ręcznie z instalacji produkcyjnej: `zip -r archiwum.zip data uploads arch`), żeby odtworzyć dane na świeżym klonie (te katalogi nie są w gicie). Waliduje ścieżki wpisów (ochrona przed zip-slip), przenosi bieżącą zawartość podmienianych top-level katalogów do `_backup/<znacznik czasu>/` zamiast ją kasować, przeładowuje kolekcje `data/*.json` w pamięci procesu i rozsyła `WS {channel:"system", action:"restore"}`, żeby inne podłączone karty przeglądarki się przeładowały.
+- `POST /api/admin/aktualizuj` — `{haslo}` w body. `git pull --ff-only` w katalogu appki; jeśli coś się zmieniło i `requirements.txt` był wśród zmienionych plików, doinstalowuje zależności (`pip install -r requirements.txt` przez `sys.executable`, czyli interpreter z tego samego venv), po czym proces **sam się kończy** (`os._exit`) — wymaga to `Restart=always` w systemd (albo równoważnego nadzorcy) na serwerze, inaczej appka nie wstanie z powrotem. `--ff-only` celowo nie tworzy merge commitów — jeśli ktoś edytował pliki bezpośrednio na serwerze (lub historia się rozjechała), pull ma jawnie zawieść z czytelnym błędem zamiast czegoś nadpisać.
+- UI dla obu powyższych: ukryte pod kliknięciem w logo (`TechMenu.js`) — najpierw hasło, potem lista akcji. Nie ma stałych przycisków w pasku sterowania (świadomie: appka nie ma kont użytkowników, więc to jedyna bramka przed funkcjami, które nadpisują dane/kod).
 - `POST /api/open-path` — **musi być zarejestrowany PRZED `/api/{name}`** (patrz pułapka niżej). Otwiera lokalną ścieżkę (folder/plik) w natywnym eksploratorze plików hosta (`os.startfile` na Windows, `open` na macOS, `xdg-open` na Linuksie). Używane przez element "link" w kartach modularnych, gdy treść nie jest adresem `http(s)://`.
 - `WS /ws` — jeden kanał dla wszystkich zdarzeń. Wiadomość: `{channel, action, payload}`. `channel` = nazwa kolekcji (`problemy`/`raport`/`lokacje`/…), `action` ∈ `create|update|comment|comment-edit|archive|delete|reorder`. Broadcast do **wszystkich** podłączonych klientów (w tym nadawcy — klient sam sobie też odbiera własne zmiany, `store.js` ma idempotentne guardy typu `if (!list.some(c => c.id === payload.id))`).
 

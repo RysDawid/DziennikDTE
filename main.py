@@ -15,9 +15,11 @@ import json
 import os
 import platform
 import re
+import secrets
 import shutil
 import socket
 import subprocess
+import sys
 import unicodedata
 import uuid
 import zipfile
@@ -728,6 +730,25 @@ async def upload(kontekst: str, owner_id: str, request: Request) -> JSONResponse
     return JSONResponse({"urls": urls})
 
 
+# ---- Admin: bramka hasłem ---------------------------------------------------- #
+# Import archiwum i aktualizacja kodu są dostępne z dowolnego urządzenia w LAN
+# (appka nie ma kont użytkowników) — chronimy je wspólnym hasłem z env var,
+# zamiast zostawiać całkiem otwarte. Brak DTE_ADMIN_HASLO na serwerze = funkcje
+# admina są całkowicie zablokowane (nie "otwarte domyślnie").
+ADMIN_HASLO = os.environ.get("DTE_ADMIN_HASLO")
+
+
+def _sprawdz_haslo(haslo: str | None) -> None:
+    if not ADMIN_HASLO or not haslo or not secrets.compare_digest(haslo, ADMIN_HASLO):
+        raise HTTPException(401, "Złe hasło (albo DTE_ADMIN_HASLO nie jest ustawione na serwerze)")
+
+
+@app.post("/api/admin/auth")
+async def admin_auth(body: dict = Body(...)) -> JSONResponse:
+    _sprawdz_haslo(body.get("haslo"))
+    return JSONResponse({"ok": True})
+
+
 # ---- Admin: import/restore archiwum ---------------------------------------- #
 # Repo publiczne nie zawiera danych produkcyjnych (patrz .gitignore: data/,
 # uploads/, arch/) — na świeżej instalacji te katalogi są puste. Ten endpoint
@@ -774,6 +795,8 @@ async def import_archiwum(request: Request) -> JSONResponse:
     top-level obecne w archiwum są NAJPIERW przenoszone do _backup/<znacznik
     czasu>/ (nie kasowane) — na wypadek wgrania złego pliku."""
     form = await request.form()
+    haslo = form.get("haslo")
+    _sprawdz_haslo(haslo if isinstance(haslo, str) else None)
     plik = next((v for v in form.values() if isinstance(v, UploadFile)), None)
     if plik is None:
         raise HTTPException(400, "Brak pliku archiwum")
@@ -829,14 +852,17 @@ async def import_archiwum(request: Request) -> JSONResponse:
     })
 
 
-# ---- Admin: aktualizacja kodu (git pull) ------------------------------------ #
+# ---- Admin: aktualizacja kodu (git pull + self-restart) --------------------- #
 @app.post("/api/admin/aktualizuj")
-async def git_update() -> JSONResponse:
-    """Pobiera najnowszy kod z gita (git pull --ff-only). NIE restartuje procesu:
-    serwer musi być podniesiony pod nadzorcą procesu (np. systemd), żeby restart
-    faktycznie załadował nowy kod — tego jeszcze nie zakładamy, więc admin musi
-    zrobić to ręcznie. --ff-only: jeśli ktoś commitował lokalnie na serwerze i
-    historia się rozjechała, pull ma jawnie zawieść zamiast tworzyć merge."""
+async def git_update(body: dict = Body(default={})) -> JSONResponse:
+    """Pobiera najnowszy kod z gita (git pull --ff-only). Jeśli coś się zmieniło:
+    doinstalowuje zależności gdy zmienił się requirements.txt, po czym proces
+    sam się kończy — wymaga to `Restart=always` w systemd (albo równoważnego
+    nadzorcy) na serwerze, który podniesie go z powrotem już z nowym kodem.
+    Bez takiego nadzorcy appka po prostu nie wstanie z powrotem o własnych
+    siłach. --ff-only: jeśli ktoś commitował lokalnie na serwerze i historia
+    się rozjechała, pull ma jawnie zawieść zamiast tworzyć merge."""
+    _sprawdz_haslo(body.get("haslo"))
     try:
         def _git(*args: str) -> subprocess.CompletedProcess:
             return subprocess.run(
@@ -855,7 +881,22 @@ async def git_update() -> JSONResponse:
         raise HTTPException(500, f"git pull nie powiódł się:\n{output}")
 
     zmieniono = before != after
-    return JSONResponse({"ok": True, "zmieniono": zmieniono, "output": output})
+    if zmieniono:
+        zmienione_pliki = _git("diff", "--name-only", before, after).stdout
+        if "requirements.txt" in zmienione_pliki:
+            try:
+                pip_result = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
+                    cwd=BASE, capture_output=True, text=True, timeout=120,
+                )
+                output += "\n\npip install:\n" + (pip_result.stdout + pip_result.stderr).strip()
+            except subprocess.TimeoutExpired:
+                output += "\n\npip install: timeout — zainstaluj zależności ręcznie"
+        # Odpowiedź musi zdążyć wrócić do klienta zanim proces się zabije —
+        # stąd małe opóźnienie zamiast natychmiastowego os._exit tutaj.
+        asyncio.get_running_loop().call_later(0.5, os._exit, 0)
+
+    return JSONResponse({"ok": True, "zmieniono": zmieniono, "output": output, "restartuje": zmieniono})
 
 
 # ---- WebSocket ------------------------------------------------------------- #

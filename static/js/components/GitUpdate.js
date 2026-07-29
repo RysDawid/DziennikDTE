@@ -1,25 +1,50 @@
-// Modal admina: pobiera najnowszy kod z gita (git pull --ff-only). NIE
-// restartuje serwera — na tym etapie appka nie zakłada nadzorcy procesu
-// (systemd) na serwerze, więc po pobraniu trzeba ręcznie zrestartować, żeby
-// nowy kod zaczął działać (patrz /api/admin/aktualizuj w main.py).
+// Modal admina: pobiera najnowszy kod z gita (git pull --ff-only) i, jeśli coś
+// się zmieniło, serwer sam się restartuje (wymaga Restart=always w systemd —
+// patrz /api/admin/aktualizuj w main.py). Po restarcie czekamy aż appka znowu
+// odpowie i przeładowujemy stronę automatycznie.
 import { ref } from "vue";
 
 export default {
+  props: { haslo: { type: String, required: true } },
   emits: ["close"],
-  setup(_, { emit }) {
+  setup(props, { emit }) {
     const busy = ref(false);
-    const result = ref(null); // { zmieniono, output }
+    const result = ref(null); // { zmieniono, output, restartuje }
     const error = ref("");
+    const restartowanie = ref(false);
+
+    async function czekajNaRestart() {
+      restartowanie.value = true;
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        try {
+          const r = await fetch("/api/bootstrap", { cache: "no-store" });
+          if (r.ok) { location.reload(); return; }
+        } catch { /* serwer jeszcze nie wstał — próbuj dalej */ }
+      }
+      restartowanie.value = false; // nie doczekaliśmy się w rozsądnym czasie
+    }
 
     async function run() {
+      if (!confirm(
+        "To pobierze najnowszy kod. Jeśli będą zmiany, serwer się ZRESTARTUJE\n" +
+        "(kilka sekund przerwy w działaniu dla wszystkich podłączonych).\n\n" +
+        "Kontynuować?"
+      )) return;
+
       busy.value = true;
       error.value = "";
       result.value = null;
       try {
-        const res = await fetch("/api/admin/aktualizuj", { method: "POST" });
+        const res = await fetch("/api/admin/aktualizuj", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ haslo: props.haslo }),
+        });
         const body = await res.json();
         if (!res.ok) throw new Error(body.detail || `Błąd ${res.status}`);
         result.value = body;
+        if (body.restartuje) czekajNaRestart();
       } catch (e) {
         error.value = e.message || "Aktualizacja nie powiodła się.";
       } finally {
@@ -27,7 +52,7 @@ export default {
       }
     }
 
-    return { busy, result, error, run, close: () => emit("close") };
+    return { busy, result, error, restartowanie, run, close: () => emit("close") };
   },
   template: `
   <Teleport to="body">
@@ -41,22 +66,21 @@ export default {
         <div class="mu-drop" style="margin-bottom:0">
           <span class="mu-drop__ico"><i class="ph-fill ph-cloud-arrow-down"></i></span>
           <span class="mu-drop__lbl">Pobierz najnowszy kod z repozytorium (git pull)</span>
-          <span class="mu-drop__hint">to tylko pobiera zmiany — nie restartuje serwera</span>
+          <span class="mu-drop__hint">jeśli będą zmiany — serwer się sam zrestartuje</span>
         </div>
 
         <div v-if="error" class="mu-note mu-note--danger" style="white-space:pre-wrap">{{ error }}</div>
         <div v-if="result" class="mu-note" :class="result.zmieniono ? 'mu-note--ok' : ''">
-          <template v-if="result.zmieniono">
-            Pobrano nowy kod. <strong>Poproś admina o restart serwera</strong>, żeby zaczął działać.
-          </template>
+          <template v-if="restartowanie">Zaktualizowano — czekam, aż serwer wróci (restartuje się)…</template>
+          <template v-else-if="result.zmieniono">Zaktualizowano i zrestartowano.</template>
           <template v-else>Już aktualne — brak nowych commitów.</template>
           <pre v-if="result.output" style="white-space:pre-wrap;margin:8px 0 0;font-size:11px;opacity:.75">{{ result.output }}</pre>
         </div>
 
         <div class="mu-foot">
-          <button class="mu-btn mu-btn--cancel" @click="close">Zamknij</button>
-          <button class="mu-btn mu-btn--upload" :disabled="busy" @click="run">
-            {{ busy ? 'Pobieram…' : 'Sprawdź aktualizacje' }}
+          <button class="mu-btn mu-btn--cancel" @click="close" :disabled="restartowanie">Zamknij</button>
+          <button class="mu-btn mu-btn--upload" :disabled="busy || restartowanie" @click="run">
+            {{ busy ? 'Pobieram…' : restartowanie ? 'Restartuję…' : 'Sprawdź aktualizacje' }}
           </button>
         </div>
       </div>

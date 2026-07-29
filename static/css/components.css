@@ -452,6 +452,48 @@
 .mu-note--ok { background: var(--field); }
 .mu-note--danger { color: var(--pilne); border-color: var(--pilne); }
 
+/* ---- Menu techniczne (hasło + lista akcji admina) -------------------- */
+.techmenu__passrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px;
+  border: var(--bw) solid var(--border);
+  background: var(--field);
+  padding: 0 10px;
+}
+.techmenu__passrow > i { font-size: 15px; color: var(--text-faint); flex: none; }
+.techmenu__passrow input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 9px 0;
+  font-size: 13px;
+}
+.techmenu__passrow input:focus { outline: none; }
+.techmenu__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+.techmenu__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: var(--bw) solid var(--border);
+  background: var(--panel);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-btn);
+  transition: box-shadow 0.12s;
+}
+.techmenu__item:hover { box-shadow: var(--shadow-soft); }
+
 .mu-foot {
   display: flex;
   gap: 8px;
