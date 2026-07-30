@@ -38,7 +38,7 @@ export default {
       >
         <!-- Nagłówek: pasek neutralny; kolor priorytetu na pasku u góry karty -->
         <div class="karta__head">
-          <button class="karta__ico-status" @click.stop="ctxOpen($event, prioItems(c))" title="Zmień priorytet"><i class="ph-fill ph-flag"></i></button>
+          <button class="karta__ico-status" @click.stop="ctxOpen($event, prioItems(c))" title="Menu karty"><i class="ph-fill ph-plus-square"></i></button>
           <input
             class="karta__title"
             v-livemodel="c.tytul"
@@ -62,7 +62,7 @@ export default {
             </div>
           </div>
 
-          <!-- Galeria / zdjęcia — dodawanie mediów przez menu flagi ("Dodaj media"),
+          <!-- Galeria / zdjęcia — dodawanie mediów przez menu karty ("Dodaj media"),
                nie przez stały przycisk. Układ: 1 zdjęcie = duże; 2 = obok siebie;
                3+ = duże + reszta małe. -->
           <div v-if="c.zdjecia?.length" class="krow">
@@ -91,7 +91,7 @@ export default {
             @close="mediaCardId = null"
           />
 
-          <!-- Załączniki — dowolne pliki, dodawane przez menu flagi ("Dodaj załącznik").
+          <!-- Załączniki — dowolne pliki, dodawane przez menu karty ("Dodaj załącznik").
                Prawy klik / przytrzymaj na pliku → usuń. -->
           <div v-if="c.zalaczniki?.length" class="krow">
             <span class="krow__ico"><i class="ph-fill ph-paperclip"></i></span>
@@ -170,9 +170,6 @@ export default {
 
         </div><!-- /karta__body -->
 
-        <div class="karta__footer">
-          <button class="btn-final" @click="archiveCard(c)">Problem rozwiązany</button>
-        </div>
       </article>
 
       <!-- Placeholder: nowy problem — tylko gdy w kolekcji nie ma jeszcze żadnej karty (jest już mały "+" przy filtrach) -->

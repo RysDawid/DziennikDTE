@@ -217,7 +217,7 @@ export default {
 
         <article v-else class="karta hist-cardview" :style="{ '--prio': prioHex(selected.priorytet) }">
           <div class="karta__head">
-            <i class="karta__ico-status ph-fill ph-flag" style="cursor:default"></i>
+            <i class="karta__ico-status ph-fill ph-plus-square" style="cursor:default"></i>
             <span class="karta__title hist-cardview__title">{{ selected.tytul || 'Bez tytułu' }}</span>
             <button class="hist-cardview__x" @click="selected = null" title="Zamknij"><i class="ph ph-x"></i></button>
           </div>

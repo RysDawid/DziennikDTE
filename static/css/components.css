@@ -542,6 +542,8 @@
   position: fixed;
   z-index: 3500;
   min-width: 184px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   background: var(--panel);
   border: var(--bw) solid var(--border-strong);
   box-shadow: 0 18px 44px rgba(0,0,0,.55);
@@ -559,6 +561,18 @@
   color: var(--text-faint);
   border-bottom: var(--bw) solid var(--border);
   margin-bottom: 2px;
+}
+.ctxmenu__category {
+  padding: 7px 11px 3px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.ctxmenu__category:not(:first-child) {
+  border-top: var(--bw) solid var(--border);
+  margin-top: 2px;
 }
 .ctxmenu__item {
   display: flex;

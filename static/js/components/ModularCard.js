@@ -1,5 +1,5 @@
 // Karta modularna — nowy, bardziej dynamiczny typ karty (użyty przez Przerwę techniczną
-// i Projekty): pasek statusu + fullscreen, nagłówek (flaga = status/dodaj update), i
+// i Projekty): pasek statusu + fullscreen, nagłówek (menu karty), i
 // modularna lista "updates" (najnowszy na górze), gdzie każdy update ma własną, przeciąganą
 // listę elementów (opis/link/media/kontakt/cena). Kolekcja (nazwa API) przychodzi propem
 // `coll`, więc ten sam komponent obsługuje dowolną liczbę zakładek tego typu.
@@ -119,17 +119,20 @@ export default {
       return [
         ...(props.hasStatus ? STATUSY_MODULAR.map((s) => ({
           label: s.label, color: s.cls === "pilne" ? "#ef4d5a" : "#f0a23c",
+          category: "Status",
           active: props.card.status === s.v, action: () => setStatus(s.v),
         })) : []),
-        { label: "Dodaj update", icon: "ph-fill ph-plus", action: addUpdate },
+        { label: "Dodaj update", icon: "ph-fill ph-plus", category: "Dodaj", action: addUpdate },
         ...(props.card.okladka
-          ? [
-              { label: "Zmień okładkę", icon: "ph-fill ph-image", action: addCover },
-              { label: "Usuń okładkę", icon: "ph-fill ph-image-broken", action: removeCover },
-            ]
-          : [{ label: "Dodaj okładkę", icon: "ph-fill ph-image", action: addCover }]),
-        { label: "Dodaj załącznik", icon: "ph-fill ph-paperclip", action: addAttachment },
-        { label: "Usuń kartę", icon: "ph-fill ph-trash", danger: true, action: deleteCard },
+          ? [{ label: "Zmień okładkę", icon: "ph-fill ph-image", category: "Dodaj", action: addCover }]
+          : [{ label: "Dodaj okładkę", icon: "ph-fill ph-image", category: "Dodaj", action: addCover }]),
+        { label: "Dodaj załącznik", icon: "ph-fill ph-paperclip", category: "Dodaj", action: addAttachment },
+        ...(props.card.okladka
+          ? [{ label: "Usuń okładkę", icon: "ph-fill ph-image-broken", category: "Akcje", action: removeCover }]
+          : []),
+        { label: "Przenieś do archiwum", icon: "ph-fill ph-archive-box", category: "Akcje",
+          action: () => emit("archive", props.card) },
+        { label: "Usuń kartę", icon: "ph-fill ph-trash", category: "Akcje", danger: true, action: deleteCard },
       ];
     }
 
@@ -230,8 +233,8 @@ export default {
     </div>
 
     <div class="karta__head" :class="{ 'karta__head--cover': card.okladka }" :style="coverStyle()">
-      <button v-if="!readonly" class="karta__ico-status" @click.stop="ctxOpen($event, flagItems())" title="Status / dodaj update / okładka"><i class="ph-fill ph-flag"></i></button>
-      <i v-else class="karta__ico-status ph-fill ph-flag" style="cursor:default"></i>
+      <button v-if="!readonly" class="karta__ico-status" @click.stop="ctxOpen($event, flagItems())" title="Menu karty"><i class="ph-fill ph-plus-square"></i></button>
+      <i v-else class="karta__ico-status ph-fill ph-plus-square" style="cursor:default"></i>
       <input class="karta__title" v-livemodel="card.tytul" :readonly="readonly" @change="e => setTitle(e.target.value)" />
       <span v-if="!fullscreen && !readonly" class="drag-handle" title="Przeciągnij, aby zmienić kolejność"></span>
     </div>
@@ -262,7 +265,7 @@ export default {
 
     <div class="pcard__updates">
       <div v-if="!card.updates.length" class="pcard__empty">
-        {{ readonly ? "Brak update'ów w tej karcie." : "Brak jeszcze żadnego update'u — dodaj pierwszy przez ikonę flagi." }}
+        {{ readonly ? "Brak update'ów w tej karcie." : "Brak jeszcze żadnego update'u — dodaj pierwszy przez ikonę plusa." }}
       </div>
       <div v-for="u in card.updates" :key="u.id" class="pupd">
         <div class="pupd__bar">
@@ -300,10 +303,7 @@ export default {
       </div>
     </div>
 
-    <div v-if="!readonly" class="karta__footer">
-      <button class="btn-final" @click="$emit('archive', card)">Przenieś do archiwum</button>
-    </div>
-    <div v-else class="karta__footer karta__footer--closed">
+    <div v-if="readonly" class="karta__footer karta__footer--closed">
       <span><i class="ph-fill ph-archive-box"></i> Zamknięto: {{ chatTime(card.closedAt) }}</span>
     </div>
 

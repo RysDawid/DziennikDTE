@@ -9,7 +9,7 @@
 import { ref, computed, watch, onBeforeUnmount } from "vue";
 
 export function useContextMenu() {
-  const ctx = ref(null); // { x, y, header?, items: [{ label, icon, danger, active, action }] } | null
+  const ctx = ref(null); // { x, y, header?, items: [{ category?, label, icon, danger, active, action }] } | null
   let timer = null;
   let longFired = false;
 
@@ -72,7 +72,8 @@ export default {
     const style = computed(() => {
       const m = props.menu;
       if (!m) return {};
-      const extra = m.header ? 32 : 0;
+      const categories = new Set(m.items.map((it) => it.category).filter(Boolean)).size;
+      const extra = (m.header ? 32 : 0) + categories * 24;
       const left = Math.max(8, Math.min(m.x, window.innerWidth - 200));
       const top = Math.max(8, Math.min(m.y, window.innerHeight - 60 - extra - m.items.length * 40));
       return { left: left + "px", top: top + "px" };
@@ -83,14 +84,17 @@ export default {
     <Teleport to="body">
       <div v-if="menu" ref="el" class="ctxmenu" :style="style">
         <div v-if="menu.header" class="ctxmenu__hd">{{ menu.header }}</div>
-        <button v-for="(it, i) in menu.items" :key="i"
-                class="ctxmenu__item" :class="{ 'is-danger': it.danger, 'is-active': it.active }"
-                @click="pick(it)">
-          <span v-if="it.color" class="ctxmenu__sw" :style="{ background: it.color }"></span>
-          <i v-else-if="it.icon" :class="it.icon"></i>
-          <span class="ctxmenu__lbl">{{ it.label }}</span>
-          <i v-if="it.active" class="ph-fill ph-check ctxmenu__check"></i>
-        </button>
+        <template v-for="(it, i) in menu.items" :key="i">
+          <div v-if="it.category && (i === 0 || menu.items[i - 1].category !== it.category)"
+               class="ctxmenu__category">{{ it.category }}</div>
+          <button class="ctxmenu__item" :class="{ 'is-danger': it.danger, 'is-active': it.active }"
+                  @click="pick(it)">
+            <span v-if="it.color" class="ctxmenu__sw" :style="{ background: it.color }"></span>
+            <i v-else-if="it.icon" :class="it.icon"></i>
+            <span class="ctxmenu__lbl">{{ it.label }}</span>
+            <i v-if="it.active" class="ph-fill ph-check ctxmenu__check"></i>
+          </button>
+        </template>
       </div>
     </Teleport>
   `,

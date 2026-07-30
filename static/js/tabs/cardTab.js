@@ -28,6 +28,12 @@ export const CARD_COLLECTIONS = [
   { id: "zakupy", label: "Zakupy" },
 ];
 
+const ARCHIVE_LABELS = {
+  problemy: "Problem rozwiązany",
+  zakupy: "Zamówienie dostarczone",
+  eksploatacja: "Zakończ wątek",
+};
+
 /**
  * @param {string} coll      Nazwa kolekcji w store ("problemy" | "zakupy" | "eksploatacja").
  * @param {object} opts
@@ -166,13 +172,13 @@ export function useCardTab(coll, { newTitle } = {}) {
     archRefresh.value++; // odśwież panel Historii, jeśli otwarty
   }
 
-  // Twarde usunięcie karty (menu przy fladze) — nieodwracalne, więc z potwierdzeniem.
+  // Twarde usunięcie karty (menu w nagłówku) — nieodwracalne, więc z potwierdzeniem.
   function deleteCard(card) {
     if (!confirm(`Usunąć kartę „${card.tytul}" na stałe? Tej operacji nie można cofnąć.`)) return;
     store.deleteCard(coll, card.id);
   }
 
-  // Przeniesienie karty do innej kolekcji (menu przy fladze) — razem z komentarzami i mediami.
+  // Przeniesienie karty do innej kolekcji (menu w nagłówku) — razem z komentarzami i mediami.
   function moveCard(card, target) {
     store.moveCard(coll, card.id, target);
   }
@@ -237,26 +243,32 @@ export function useCardTab(coll, { newTitle } = {}) {
       action: () => deleteAttachment(card, att) }];
   }
 
-  // Pozycje menu flagi w nagłówku karty: priorytet + dodaj media/załącznik +
+  // Pozycje menu w nagłówku karty: status + dodaj media/załącznik +
   // przeniesienie do innej kolekcji (modularnie, z CARD_COLLECTIONS — nowa
-  // kolekcja dopisuje się tu sama) + usunięcie.
+  // kolekcja dopisuje się tu sama) + archiwizacja/usunięcie.
   function prioItems(card) {
     const moveItems = CARD_COLLECTIONS.filter((c) => c.id !== coll).map((c) => ({
       label: "Przenieś do: " + c.label,
       icon: "ph-fill ph-arrows-left-right",
+      category: "Akcje",
       action: () => moveCard(card, c.id),
     }));
     return [
       ...PRIO.map((p) => ({
         label: p.label,
         color: p.hex,
+        category: "Status",
         active: card.priorytet === p.v,
         action: () => patchCard(card.id, { priorytet: p.v }),
       })),
-      { label: "Dodaj media", icon: "ph-fill ph-image", action: () => addMedia(card) },
-      { label: "Dodaj załącznik", icon: "ph-fill ph-paperclip", action: () => addAttachment(card) },
+      { label: "Dodaj media", icon: "ph-fill ph-image", category: "Dodaj",
+        action: () => addMedia(card) },
+      { label: "Dodaj załącznik", icon: "ph-fill ph-paperclip", category: "Dodaj",
+        action: () => addAttachment(card) },
       ...moveItems,
-      { label: "Usuń kartę", icon: "ph-fill ph-trash", danger: true,
+      { label: ARCHIVE_LABELS[coll] || "Przenieś do archiwum", icon: "ph-fill ph-archive-box",
+        category: "Akcje", action: () => archiveCard(card) },
+      { label: "Usuń kartę", icon: "ph-fill ph-trash", category: "Akcje", danger: true,
         action: () => deleteCard(card) },
     ];
   }
