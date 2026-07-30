@@ -303,8 +303,13 @@ function refreshLinkMirrorStyle(el) {
   const css = getComputedStyle(el);
   for (const prop of MIRROR_STYLE_PROPS) mirror.style[prop] = css[prop];
   mirror.style.color = css.color;
-  mirror.style.backgroundColor = css.backgroundColor;
-  mirror.style.backgroundImage = css.backgroundImage;
+  // Tło należy do kontenera, nie do warstwy tekstu. Przezroczyste lustro
+  // pozostawia widoczne natywny kursor i zaznaczenie pola leżącego pod nim,
+  // a same linki nadal mogą odbierać kliknięcia.
+  field.style.backgroundColor = css.backgroundColor;
+  field.style.backgroundImage = css.backgroundImage;
+  mirror.style.backgroundColor = "transparent";
+  mirror.style.backgroundImage = "none";
   mirror.style.borderColor = "transparent";
   el.style.caretColor = css.color;
   field.classList.add("is-highlight-ready");
@@ -381,7 +386,10 @@ app.directive("detect-links", {
     el.removeEventListener("blur", el._detectLinksRestyle);
     el._detectLinksThemeObserver?.disconnect();
     el._linkMirror?.remove();
-    el.closest(".link-highlight-field")?.classList.remove("is-highlight-ready");
+    const field = el.closest(".link-highlight-field");
+    field?.classList.remove("is-highlight-ready");
+    field?.style.removeProperty("background-color");
+    field?.style.removeProperty("background-image");
     delete el._linkMirror;
     delete el._detectLinksInput;
     delete el._detectLinksScroll;

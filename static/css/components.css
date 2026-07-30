@@ -127,6 +127,10 @@
   color: var(--text-muted);
   -webkit-text-fill-color: var(--text-muted);
 }
+.link-highlight-field.is-highlight-ready > input::selection,
+.link-highlight-field.is-highlight-ready > textarea::selection {
+  background: var(--selection-bg);
+}
 
 /* --- Przyciski akcji ------------------------------------------------- */
 .btn-media,
