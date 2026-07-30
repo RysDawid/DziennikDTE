@@ -381,19 +381,23 @@
 /* ---- Modal upload mediów -------------------------------------------- */
 .mu-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,.45);
+  background: var(--modal-overlay);
+  color: var(--text);
   z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 .mu-dialog {
   background: var(--panel);
+  color: var(--text);
   border: var(--bw) solid var(--border-strong);
   width: min(520px, 94vw);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  box-shadow: var(--modal-shadow);
 }
 .mu-hd {
   display: flex;
@@ -403,7 +407,7 @@
   border-bottom: var(--bw) solid var(--border);
   background: var(--panel-2);
 }
-.mu-title { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+.mu-title { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--text); }
 .mu-close {
   border: none; background: none;
   font-size: 16px; color: var(--text-muted);
@@ -422,12 +426,13 @@
   transition: background 0.15s, border-color 0.15s;
 }
 .mu-drop.is-over { background: var(--panel-2); border-color: var(--border-strong); }
-.mu-drop__ico { font-size: 28px; }
+.mu-drop__ico { font-size: 28px; color: var(--text); }
 .mu-drop__lbl { font-size: 13px; color: var(--text-muted); }
 .mu-drop__hint { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
 .mu-pick {
   border: var(--bw) solid var(--border);
   background: var(--panel);
+  color: var(--text);
   padding: 5px 14px;
   font-size: 12.5px;
   font-weight: 600;
@@ -509,6 +514,7 @@
   padding: 9px 12px;
   font-size: 12.5px;
   border: var(--bw) solid var(--border);
+  color: var(--text);
 }
 .mu-note--ok { background: var(--field); }
 .mu-note--danger { color: var(--pilne); border-color: var(--pilne); }
@@ -546,14 +552,20 @@
   gap: 9px;
   border: var(--bw) solid var(--border);
   background: var(--panel);
+  color: var(--text);
   padding: 10px 14px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   box-shadow: var(--shadow-btn);
-  transition: box-shadow 0.12s;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
-.techmenu__item:hover { box-shadow: var(--shadow-soft); }
+.techmenu__item:hover {
+  background: var(--field);
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-soft);
+}
+.techmenu__item > i { color: var(--accent); }
 
 .mu-foot {
   display: flex;
@@ -565,6 +577,7 @@
 }
 .mu-btn {
   border: var(--bw) solid var(--border);
+  color: var(--text);
   padding: 8px 18px;
   font-size: 13px;
   font-weight: 600;

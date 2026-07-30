@@ -359,6 +359,11 @@ app.directive("detect-links", {
     };
     el._detectLinksScroll = () => syncLinkMirrorScroll(el);
     el._detectLinksRestyle = () => requestAnimationFrame(() => refreshLinkMirrorStyle(el));
+    el._detectLinksThemeObserver = new MutationObserver(el._detectLinksRestyle);
+    el._detectLinksThemeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
     el.addEventListener("input", el._detectLinksInput);
     el.addEventListener("scroll", el._detectLinksScroll);
     el.addEventListener("focus", el._detectLinksRestyle);
@@ -374,12 +379,14 @@ app.directive("detect-links", {
     el.removeEventListener("scroll", el._detectLinksScroll);
     el.removeEventListener("focus", el._detectLinksRestyle);
     el.removeEventListener("blur", el._detectLinksRestyle);
+    el._detectLinksThemeObserver?.disconnect();
     el._linkMirror?.remove();
     el.closest(".link-highlight-field")?.classList.remove("is-highlight-ready");
     delete el._linkMirror;
     delete el._detectLinksInput;
     delete el._detectLinksScroll;
     delete el._detectLinksRestyle;
+    delete el._detectLinksThemeObserver;
   },
 });
 

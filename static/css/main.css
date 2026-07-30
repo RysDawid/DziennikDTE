@@ -62,6 +62,8 @@
   --shadow-card: 0 14px 38px rgba(0, 0, 0, 0.55);
   --shadow-soft: 0 8px 26px rgba(0, 0, 0, 0.45);
   --shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.40);
+  --modal-overlay: rgba(5, 8, 14, 0.66);
+  --modal-shadow: 0 20px 60px rgba(0, 0, 0, 0.48);
 
   /* Spoczynkowa „poświata" kart — odcina je od tła */
   --lift: 0 12px 30px rgba(0, 0, 0, 0.6),
@@ -100,6 +102,8 @@
   --shadow-card: 0 12px 30px rgba(40, 55, 80, 0.16);
   --shadow-soft: 0 8px 22px rgba(40, 55, 80, 0.14);
   --shadow-btn: 0 1px 4px rgba(40, 55, 80, 0.14);
+  --modal-overlay: rgba(55, 68, 88, 0.28);
+  --modal-shadow: 0 20px 54px rgba(40, 55, 80, 0.24);
 
   --lift: 0 10px 26px rgba(40, 55, 80, 0.14),
           0 0 0 1px rgba(20, 30, 50, 0.06);
