@@ -94,7 +94,7 @@
 .link-highlight-field__mirror {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 2;
   overflow: hidden;
   pointer-events: none;
   white-space: pre-wrap;
@@ -109,6 +109,8 @@
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
+  pointer-events: auto;
+  cursor: pointer;
 }
 .link-highlight-field.is-highlight-ready > input,
 .link-highlight-field.is-highlight-ready > textarea {

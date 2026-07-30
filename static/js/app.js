@@ -322,10 +322,13 @@ function renderDetectedLinks(el, value) {
   const fragment = document.createDocumentFragment();
   for (const part of linkifyParts(value)) {
     if (part.href) {
-      const mark = document.createElement("span");
-      mark.className = "inline-link-highlight";
-      mark.textContent = part.text;
-      fragment.append(mark);
+      const link = linkAnchor(part);
+      link.classList.add("inline-link-highlight");
+      // Pole tekstowe pozostaje jedynym elementem klawiaturowym. Link w lustrze
+      // reaguje na kliknięcie myszy/dotyku, a po zapisaniu treści zwykły
+      // v-autolink jest już dostępny także z klawiatury.
+      link.tabIndex = -1;
+      fragment.append(link);
     } else {
       fragment.append(document.createTextNode(part.text));
     }
