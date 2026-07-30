@@ -1,6 +1,6 @@
 // Globalny reaktywny stan + klient WebSocket + autosave.
 import { reactive } from "vue";
-import { todayISO } from "./utils.js";
+import { hardReloadAfterRestart, todayISO } from "./utils.js";
 
 async function api(url, opts = {}) {
   const res = await fetch(url, {
@@ -99,6 +99,13 @@ export const store = reactive({
       // Własna karta inicjatora tłumi to (_importing) — pokazuje wynik i
       // przeładowuje się sama po zamknięciu modala.
       if (!this._importing) location.reload();
+      return;
+    }
+    if (channel === "system" && action === "code-update") {
+      // Aktualizacja wykonana z innego urządzenia/karty: poczekaj na NOWY
+      // proces i również przeładuj kod, żeby wszyscy klienci przeszli na tę
+      // samą wersję bez ręcznego Ctrl+Shift+R.
+      hardReloadAfterRestart(payload.bootId, payload.wersja);
       return;
     }
     if (channel === "raport" && action === "update") {

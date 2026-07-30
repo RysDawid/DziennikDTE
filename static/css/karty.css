@@ -432,7 +432,11 @@
 .chat-deleted-lbl i { font-size: 12px; }
 
 /* Edycja wiadomości czatu (inline) */
-.chat-edit { display: flex; align-items: center; gap: 4px; width: 100%; }
+.chat-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; width: 100%; }
+.chat-edit > .detected-links {
+  order: 4;
+  flex-basis: 100%;
+}
 .chat-edit__inp {
   flex: 1;
   min-width: 0;
@@ -463,8 +467,13 @@
 
 .chat-reply {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 5px;
+}
+.chat-reply > .detected-links {
+  order: 3;
+  flex-basis: 100%;
 }
 .chat-input {
   flex: 1;

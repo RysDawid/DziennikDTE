@@ -9,6 +9,7 @@ import PrzerwaTechniczna from "./tabs/PrzerwaTechniczna.js";
 import Projekty from "./tabs/Projekty.js";
 import { PRIO } from "./tabs/cardTab.js";
 import TechMenu from "./components/TechMenu.js";
+import { linkifyParts, textLinks } from "./utils.js";
 
 // Zakładki pogrupowane wizualnie (większy odstęp MIĘDZY grupami, zakładki
 // WEWNĄTRZ grupy stykają się jak dotychczas — styl "teczek"). Kolejność grup
@@ -251,6 +252,64 @@ const App = {
 };
 
 const app = createApp(App);
+
+function linkAnchor(part) {
+  const a = document.createElement("a");
+  a.className = "autolink";
+  a.href = part.href;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.textContent = part.text;
+  a.title = `Otwórz: ${part.href}`;
+  a.addEventListener("click", (e) => e.stopPropagation());
+  return a;
+}
+
+// v-autolink="tekst": treść tylko do odczytu z klikalnymi URL-ami.
+function renderAutolinkText(el, value) {
+  const fragment = document.createDocumentFragment();
+  for (const part of linkifyParts(value)) {
+    fragment.append(part.href ? linkAnchor(part) : document.createTextNode(part.text));
+  }
+  el.replaceChildren(fragment);
+}
+app.directive("autolink", {
+  mounted: (el, binding) => renderAutolinkText(el, binding.value),
+  updated: (el, binding) => {
+    if (binding.value !== binding.oldValue) renderAutolinkText(el, binding.value);
+  },
+});
+
+// v-detect-links="tekst": natywne textarea/input pozostaje edytowalne, a
+// wykryte URL-e pojawiają się bezpośrednio pod nim jako klikalne odnośniki.
+function renderDetectedLinks(el, value) {
+  const box = el._detectedLinks;
+  if (!box) return;
+  const links = textLinks(value);
+  box.replaceChildren(...links.map(linkAnchor));
+  box.hidden = !links.length;
+}
+app.directive("detect-links", {
+  mounted(el, binding) {
+    const box = document.createElement("div");
+    box.className = "detected-links";
+    box.hidden = true;
+    el.insertAdjacentElement("afterend", box);
+    el._detectedLinks = box;
+    el._detectLinksInput = () => renderDetectedLinks(el, el.value);
+    el.addEventListener("input", el._detectLinksInput);
+    renderDetectedLinks(el, binding.value ?? el.value);
+  },
+  updated(el, binding) {
+    renderDetectedLinks(el, document.activeElement === el ? el.value : binding.value);
+  },
+  beforeUnmount(el) {
+    el.removeEventListener("input", el._detectLinksInput);
+    el._detectedLinks?.remove();
+    delete el._detectedLinks;
+    delete el._detectLinksInput;
+  },
+});
 
 // v-skel: skeleton-shimmer na <img> aż do załadowania (puste tło → animowany gradient).
 app.directive("skel", {

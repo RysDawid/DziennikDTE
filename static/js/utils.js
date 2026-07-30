@@ -62,3 +62,83 @@ export function formatBytes(n) {
   while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
   return `${v.toFixed(v < 10 ? 1 : 0)} ${units[i]}`;
 }
+
+// Linki rozpoznawane w treści swobodnej. Celowo wymagamy schematu albo "www.",
+// żeby zwykłe fragmenty tekstu z kropką nie zmieniały się przypadkiem w URL.
+const TEXT_LINK_RE = /(?:https?:\/\/|ftp:\/\/|mailto:|www\.)[^\s<>"']+/giu;
+const LINK_TRAILING_RE = /[.,!?;:)\]}]+$/u;
+
+export function linkHref(value) {
+  const v = String(value || "").trim();
+  return /^www\./i.test(v) ? `https://${v}` : v;
+}
+
+export function isWebLink(value) {
+  return /^(?:https?:\/\/|ftp:\/\/|mailto:|www\.)/i.test(String(value || "").trim());
+}
+
+/** Tekst -> bezpieczne części [{ text }] / [{ text, href }], bez użycia v-html. */
+export function linkifyParts(value) {
+  const text = String(value || "");
+  const parts = [];
+  let cursor = 0;
+
+  for (const match of text.matchAll(TEXT_LINK_RE)) {
+    const start = match.index;
+    let raw = match[0];
+    const trailing = raw.match(LINK_TRAILING_RE)?.[0] || "";
+    if (trailing) raw = raw.slice(0, -trailing.length);
+    if (!raw) continue;
+
+    if (start > cursor) parts.push({ text: text.slice(cursor, start) });
+    parts.push({ text: raw, href: linkHref(raw) });
+    if (trailing) parts.push({ text: trailing });
+    cursor = start + match[0].length;
+  }
+  if (cursor < text.length) parts.push({ text: text.slice(cursor) });
+  return parts;
+}
+
+export function textLinks(value) {
+  return linkifyParts(value).filter((part) => part.href);
+}
+
+// Jedna współdzielona sekwencja na kartę przeglądarki. Może ją uruchomić
+// jednocześnie modal aktualizacji i komunikat WebSocket — oba dostaną ten sam
+// Promise, więc nie powstaną dwa równoległe pollingi/przeładowania.
+let hardRestartPromise = null;
+
+/**
+ * Czeka na faktycznie NOWY proces backendu (inny bootId), a następnie wykonuje
+ * pełną nawigację z wersją commita w URL-u. W połączeniu z nagłówkami no-cache
+ * backendu daje odpowiednik hard refresh dla kodu aplikacji.
+ */
+export function hardReloadAfterRestart(staryBootId, wersja, timeoutMs = 60000) {
+  if (hardRestartPromise) return hardRestartPromise;
+
+  hardRestartPromise = (async () => {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      try {
+        const probe = new URL("/api/bootstrap", location.origin);
+        probe.searchParams.set("_restart", Date.now());
+        const response = await fetch(probe, { cache: "no-store" });
+        if (!response.ok) continue;
+        const bootstrap = await response.json();
+        if (!bootstrap.bootId || bootstrap.bootId === staryBootId) continue;
+
+        const target = new URL(location.href);
+        target.searchParams.set("_v", (wersja || bootstrap.bootId).slice(0, 12));
+        location.replace(target.href);
+        return true;
+      } catch {
+        // Serwer jest pomiędzy zatrzymaniem i ponownym uruchomieniem.
+      }
+    }
+    hardRestartPromise = null;
+    return false;
+  })();
+
+  return hardRestartPromise;
+}

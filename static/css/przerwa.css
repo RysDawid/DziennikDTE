@@ -126,6 +126,7 @@
 }
 .pel {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 9px;
   border: var(--bw) solid var(--border);
@@ -169,7 +170,29 @@
   padding: 5px 2px;
   outline: none;
 }
-.pel--link .pel__inp { color: var(--accent); }
+.pel > .detected-links {
+  order: 4;
+  width: calc(100% - 27px);
+  margin-left: 27px;
+}
+.pel__link-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pel__link-title {
+  font-weight: 700;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.pel__link-address {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.pel__link-address .pel__inp { color: var(--accent); }
 .pel--cena .pel__inp { font-weight: 700; }
 .pel__open {
   flex: none;

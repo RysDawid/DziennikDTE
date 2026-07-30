@@ -260,6 +260,27 @@ async def lifespan(app: FastAPI):
 # Aplikacja
 # --------------------------------------------------------------------------- #
 app = FastAPI(title="DTE — CNE", lifespan=lifespan)
+BOOT_ID = uuid.uuid4().hex
+
+
+@app.middleware("http")
+async def no_cache_code_assets(request: Request, call_next):
+    """Kod UI nie może zostać w cache'u po zdalnej aktualizacji aplikacji.
+
+    Zdjęcia/fonty nadal mogą być cache'owane; wyłączamy cache tylko dla HTML,
+    JS i CSS, czyli plików, które mogą zmienić zachowanie lub wygląd UI.
+    """
+    response = await call_next(request)
+    path = request.url.path
+    is_code_asset = path == "/" or (
+        path.startswith("/static/")
+        and Path(path).suffix.lower() in {".html", ".js", ".mjs", ".css"}
+    )
+    if is_code_asset:
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 app.mount("/img", StaticFiles(directory=str(IMG)), name="img")
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS)), name="uploads")
@@ -280,6 +301,9 @@ async def bootstrap() -> dict:
         "statusy": STATUSY,
         "today": date.today().isoformat(),
         "serverTime": datetime.now().isoformat(),
+        # Losowy identyfikator procesu — klient aktualizacji czeka, aż po git
+        # pull odpowie NOWA instancja, zamiast uznać stary proces za gotowy.
+        "bootId": BOOT_ID,
         # Liczba zarchiwizowanych kart w każdej kolekcji — badge na przycisku „Historia".
         "archCounts": {
             name: sum(1 for c in coll[0] if c.get("archiwum"))
@@ -852,7 +876,7 @@ async def import_archiwum(request: Request) -> JSONResponse:
     })
 
 
-# ---- Admin: aktualizacja kodu (git pull + self-restart) --------------------- #
+# ---- Admin: aktualizacja kodu (git pull + twardy restart) ------------------ #
 @app.post("/api/admin/aktualizuj")
 async def git_update(body: dict = Body(default={})) -> JSONResponse:
     """Pobiera najnowszy kod z gita (git pull --ff-only). Jeśli coś się zmieniło:
@@ -892,11 +916,23 @@ async def git_update(body: dict = Body(default={})) -> JSONResponse:
                 output += "\n\npip install:\n" + (pip_result.stdout + pip_result.stderr).strip()
             except subprocess.TimeoutExpired:
                 output += "\n\npip install: timeout — zainstaluj zależności ręcznie"
-        # Odpowiedź musi zdążyć wrócić do klienta zanim proces się zabije —
-        # stąd małe opóźnienie zamiast natychmiastowego os._exit tutaj.
-        asyncio.get_running_loop().call_later(0.5, os._exit, 0)
+        # Wszystkie otwarte klienty zaczną czekać na nową instancję serwera.
+        # Inicjator dostanie ten sam bootId również w odpowiedzi HTTP.
+        await emit("system", "code-update", {"bootId": BOOT_ID, "wersja": after})
 
-    return JSONResponse({"ok": True, "zmieniono": zmieniono, "output": output, "restartuje": zmieniono})
+        # Odpowiedź musi zdążyć wrócić do klienta zanim proces zakończy się
+        # bez cleanupu. Nadzorca (np. systemd Restart=always) uruchomi nowy
+        # proces; zmiana BOOT_ID pozwoli klientom jednoznacznie go rozpoznać.
+        asyncio.get_running_loop().call_later(0.75, os._exit, 0)
+
+    return JSONResponse({
+        "ok": True,
+        "zmieniono": zmieniono,
+        "output": output,
+        "restartuje": zmieniono,
+        "bootId": BOOT_ID,
+        "wersja": after,
+    })
 
 
 # ---- WebSocket ------------------------------------------------------------- #

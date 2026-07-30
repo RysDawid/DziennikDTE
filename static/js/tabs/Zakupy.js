@@ -123,6 +123,7 @@ export default {
                 v-autogrow="c.opis"
                 v-spellfocus
                 v-livemodel="c.opis"
+                v-detect-links="c.opis"
                 placeholder="Opis, nazwy, numery przedmiotów oraz przykładowe linki…"
                 @input="e => patchCard(c.id, { opis: e.target.value })"
               ></textarea>
@@ -139,7 +140,7 @@ export default {
                   class="chat-msg" :class="'chat-msg--' + m.autor"
                 >
                   <div v-if="editMsg && editMsg.cardId === c.id && editMsg.msgId === m.id" class="chat-edit">
-                    <input class="chat-edit__inp" :data-edit="c.id + ':' + m.id" v-model="editMsgText"
+                    <input class="chat-edit__inp" :data-edit="c.id + ':' + m.id" v-model="editMsgText" v-detect-links="editMsgText"
                            @keydown.enter.prevent="commitEditMsg" @keydown.esc="cancelEditMsg" />
                     <button class="chat-edit__btn chat-edit__btn--ok" @click="commitEditMsg" title="Zapisz"><i class="ph-fill ph-check"></i></button>
                     <button class="chat-edit__btn chat-edit__btn--cancel" @click="cancelEditMsg" title="Anuluj"><i class="ph-fill ph-x"></i></button>
@@ -149,7 +150,7 @@ export default {
                          v-on="ctxBind(() => msgItems(c, m))"
                          :title="m.usunieta ? '' : 'Prawy klik / przytrzymaj → edytuj'">
                       <span v-if="m.usunieta" class="chat-deleted-lbl"><i class="ph ph-prohibit"></i> Wiadomość usunięta</span>
-                      <template v-else>{{ m.tekst }}</template>
+                      <span v-else class="autolink-text" v-autolink="m.tekst"></span>
                     </div>
                     <div class="chat-ts">{{ chatTime(m.ts) }}<span v-if="m.editedAt && !m.usunieta" class="chat-edited"> · edytowano {{ chatTime(m.editedAt) }}</span></div>
                   </template>
@@ -159,6 +160,7 @@ export default {
                 <input
                   class="chat-input"
                   v-model="replyText[c.id]"
+                  v-detect-links="replyText[c.id]"
                   placeholder="Napisz wiadomość lub status"
                   @keydown.enter.prevent="openSendMenu(c, $event)"
                 />

@@ -545,11 +545,14 @@ export default {
 
                 <!-- Po wyborze predefiniowanego statusu: opis + media -->
                 <template v-if="rec(c.key).status">
-                  <textarea class="card__inny" v-livemodel="rec(c.key).opis || ''"
-                            :disabled="!store.raport.editable"
-                            v-spellfocus
-                            placeholder="Szczegółowy opis…"
-                            @input="(e) => setOpis(c.key, e.target.value)"></textarea>
+                  <div class="field-with-links">
+                    <textarea class="card__inny" v-livemodel="rec(c.key).opis || ''"
+                              v-detect-links="rec(c.key).opis || ''"
+                              :disabled="!store.raport.editable"
+                              v-spellfocus
+                              placeholder="Szczegółowy opis…"
+                              @input="(e) => setOpis(c.key, e.target.value)"></textarea>
+                  </div>
 
                   <div class="card__media">
                     <div v-if="rec(c.key).media?.length" class="card__media-thumbs">

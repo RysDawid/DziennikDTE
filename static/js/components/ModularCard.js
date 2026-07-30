@@ -7,7 +7,7 @@
 // (prop `fullscreen`) — więc "wątek na forum" to po prostu ta sama karta, tylko powiększona.
 import { ref, computed } from "vue";
 import { store } from "../store.js";
-import { chatTime, formatBytes } from "../utils.js";
+import { chatTime, formatBytes, isWebLink } from "../utils.js";
 import { useContextMenu } from "./ContextMenu.js";
 import MediaUpload from "./MediaUpload.js";
 import AttachmentUpload from "./AttachmentUpload.js";
@@ -38,13 +38,9 @@ function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-// Adres webowy (ma schemat protokołu, np. https://, ftp://) vs lokalna ścieżka
+// Adres webowy (ma schemat protokołu albo zaczyna się od www.) vs lokalna ścieżka
 // (folder/plik) — przeglądarka nie umie nawigować do file://, więc lokalne
 // ścieżki otwieramy przez backend (natywny eksplorator plików na hoście).
-function isWebUrl(v) {
-  return /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(v);
-}
-
 export default {
   components: { MediaUpload, AttachmentUpload, ImageModal, ContextMenu },
   props: {
@@ -139,7 +135,10 @@ export default {
     function addElement(u, typ) {
       const el = { id: genId(), typ };
       if (typ === "media") el.urls = [];
-      else el.tresc = "";
+      else {
+        el.tresc = "";
+        if (typ === "link") el.tytul = "";
+      }
       u.elementy.push(el);
       save();
       if (typ === "media") mediaTarget.value = el;
@@ -156,6 +155,7 @@ export default {
       return [{ label: "Usuń element", icon: "ph-fill ph-trash", danger: true, action: () => removeEl(u, el) }];
     }
     function setElContent(el, v) { el.tresc = v; save(); }
+    function setElTitle(el, v) { el.tytul = v; save(); }
     function reorderEl(u, order) {
       const pos = Object.fromEntries(order.map((id, i) => [id, i]));
       u.elementy.sort((a, b) => (pos[a.id] ?? 1e4) - (pos[b.id] ?? 1e4));
@@ -183,7 +183,11 @@ export default {
     // (folder/plik) -> otwórz natywnego eksploratora plików przez backend.
     async function openLink(v) {
       if (!v) return;
-      if (isWebUrl(v)) { window.open(v, "_blank", "noopener"); return; }
+      if (isWebLink(v)) {
+        const url = /^www\./i.test(v.trim()) ? `https://${v.trim()}` : v.trim();
+        window.open(url, "_blank", "noopener");
+        return;
+      }
       try {
         const res = await fetch("/api/open-path", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -198,13 +202,13 @@ export default {
     return {
       ctxMenu: ctxMenu.ctx, ctxOpen: ctxMenu.open, ctxBind: ctxMenu.bind, ctxClose: ctxMenu.close,
       mediaTarget, coverUploadOpen, attachUploadOpen, lightbox, lightboxImages, chatTime, formatBytes,
-      setTitle, flagItems, addUpdate, elItems, addElement, removeEl, elMenuItems, setElContent,
+      setTitle, flagItems, addUpdate, elItems, addElement, removeEl, elMenuItems, setElContent, setElTitle,
       reorderEl, onMediaUploaded, openLightbox, onLightboxDelete, openLink, onCoverUploaded, coverStyle,
       onAttachUploaded, attachMenuItems,
       elIcon: (typ) => EL_ICO[typ] || "ph-fill ph-note",
       elPlaceholder: (typ) => EL_PLACEHOLDER[typ] || "",
-      linkOpenIcon: (v) => (isWebUrl(v) ? "ph-fill ph-arrow-square-out" : "ph-fill ph-folder-open"),
-      linkOpenTitle: (v) => (isWebUrl(v) ? "Otwórz link" : "Otwórz w eksploratorze plików"),
+      linkOpenIcon: (v) => (isWebLink(v) ? "ph-fill ph-arrow-square-out" : "ph-fill ph-folder-open"),
+      linkOpenTitle: (v) => (isWebLink(v) ? "Otwórz link" : "Otwórz w eksploratorze plików"),
     };
   },
   directives: {
@@ -281,14 +285,22 @@ export default {
               <img v-for="(mUrl,i) in (el.urls||[])" :key="i" v-skel :src="mUrl" @click="openLightbox(el, i)" />
               <button v-if="!readonly" class="btn-media pel__mediaBtn" @click="mediaTarget = el">Dodaj zdjęcia…</button>
             </div>
-            <textarea v-else-if="el.typ === 'opis'" class="pel__txt" v-autogrow="el.tresc" v-spellfocus v-livemodel="el.tresc" :readonly="readonly"
+            <textarea v-else-if="el.typ === 'opis'" class="pel__txt" v-autogrow="el.tresc" v-spellfocus v-livemodel="el.tresc" v-detect-links="el.tresc" :readonly="readonly"
                       placeholder="Opis…" @input="e => setElContent(el, e.target.value)"></textarea>
-            <textarea v-else-if="el.typ === 'kontakt'" class="pel__txt" v-autogrow="el.tresc" v-spellfocus v-livemodel="el.tresc" :readonly="readonly"
+            <textarea v-else-if="el.typ === 'kontakt'" class="pel__txt" v-autogrow="el.tresc" v-spellfocus v-livemodel="el.tresc" v-detect-links="el.tresc" :readonly="readonly"
                       :placeholder="elPlaceholder(el.typ)" @input="e => setElContent(el, e.target.value)"></textarea>
+            <div v-else-if="el.typ === 'link'" class="pel__link-fields">
+              <input class="pel__inp pel__link-title" v-livemodel="el.tytul || ''" placeholder="Tytuł linku…" :readonly="readonly"
+                     @change="e => setElTitle(el, e.target.value)" />
+              <div class="pel__link-address">
+                <input class="pel__inp" v-livemodel="el.tresc" :placeholder="elPlaceholder(el.typ)" :readonly="readonly"
+                       @change="e => setElContent(el, e.target.value)" />
+                <button v-if="el.tresc" class="pel__open" @click="openLink(el.tresc)" :title="linkOpenTitle(el.tresc)"><i :class="linkOpenIcon(el.tresc)"></i></button>
+              </div>
+            </div>
             <template v-else>
-              <input class="pel__inp" v-livemodel="el.tresc" :placeholder="elPlaceholder(el.typ)" :readonly="readonly"
+              <input class="pel__inp" v-livemodel="el.tresc" v-detect-links="el.tresc" :placeholder="elPlaceholder(el.typ)" :readonly="readonly"
                      @change="e => setElContent(el, e.target.value)" />
-              <button v-if="el.typ === 'link' && el.tresc" class="pel__open" @click="openLink(el.tresc)" :title="linkOpenTitle(el.tresc)"><i :class="linkOpenIcon(el.tresc)"></i></button>
             </template>
 
             <span v-if="!readonly" class="pel__handle drag-handle" title="Przeciągnij"></span>

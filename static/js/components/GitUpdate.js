@@ -1,8 +1,9 @@
 // Modal admina: pobiera najnowszy kod z gita (git pull --ff-only) i, jeśli coś
-// się zmieniło, serwer sam się restartuje (wymaga Restart=always w systemd —
-// patrz /api/admin/aktualizuj w main.py). Po restarcie czekamy aż appka znowu
-// odpowie i przeładowujemy stronę automatycznie.
+// się zmieniło, serwer wykonuje twardy restart (wymaga Restart=always w systemd
+// — patrz /api/admin/aktualizuj w main.py). Klient czeka na nowy bootId i robi
+// pełne przeładowanie kodu z pominięciem starego cache'u.
 import { ref } from "vue";
+import { hardReloadAfterRestart } from "../utils.js";
 
 export default {
   props: { haslo: { type: String, required: true } },
@@ -12,17 +13,18 @@ export default {
     const result = ref(null); // { zmieniono, output, restartuje }
     const error = ref("");
     const restartowanie = ref(false);
+    const restartNieudany = ref(false);
 
-    async function czekajNaRestart() {
+    async function czekajNaRestart(staryBootId, wersja) {
       restartowanie.value = true;
-      for (let i = 0; i < 30; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
-        try {
-          const r = await fetch("/api/bootstrap", { cache: "no-store" });
-          if (r.ok) { location.reload(); return; }
-        } catch { /* serwer jeszcze nie wstał — próbuj dalej */ }
+      const gotowy = await hardReloadAfterRestart(staryBootId, wersja);
+      if (!gotowy) {
+        restartowanie.value = false;
+        restartNieudany.value = true;
+        error.value =
+          "Kod został pobrany, ale nowa instancja serwera nie uruchomiła się " +
+          "w ciągu 60 sekund. Sprawdź usługę i wykonaj twarde odświeżenie strony.";
       }
-      restartowanie.value = false; // nie doczekaliśmy się w rozsądnym czasie
     }
 
     async function run() {
@@ -34,6 +36,7 @@ export default {
 
       busy.value = true;
       error.value = "";
+      restartNieudany.value = false;
       result.value = null;
       try {
         const res = await fetch("/api/admin/aktualizuj", {
@@ -44,7 +47,7 @@ export default {
         const body = await res.json();
         if (!res.ok) throw new Error(body.detail || `Błąd ${res.status}`);
         result.value = body;
-        if (body.restartuje) czekajNaRestart();
+        if (body.restartuje) czekajNaRestart(body.bootId, body.wersja);
       } catch (e) {
         error.value = e.message || "Aktualizacja nie powiodła się.";
       } finally {
@@ -52,7 +55,7 @@ export default {
       }
     }
 
-    return { busy, result, error, restartowanie, run, close: () => emit("close") };
+    return { busy, result, error, restartowanie, restartNieudany, run, close: () => emit("close") };
   },
   template: `
   <Teleport to="body">
@@ -71,7 +74,8 @@ export default {
 
         <div v-if="error" class="mu-note mu-note--danger" style="white-space:pre-wrap">{{ error }}</div>
         <div v-if="result" class="mu-note" :class="result.zmieniono ? 'mu-note--ok' : ''">
-          <template v-if="restartowanie">Zaktualizowano — czekam, aż serwer wróci (restartuje się)…</template>
+          <template v-if="restartowanie">Zaktualizowano — czekam na nowy proces i twarde przeładowanie…</template>
+          <template v-else-if="restartNieudany">Kod pobrany — restart nie został potwierdzony.</template>
           <template v-else-if="result.zmieniono">Zaktualizowano i zrestartowano.</template>
           <template v-else>Już aktualne — brak nowych commitów.</template>
           <pre v-if="result.output" style="white-space:pre-wrap;margin:8px 0 0;font-size:11px;opacity:.75">{{ result.output }}</pre>
@@ -80,7 +84,7 @@ export default {
         <div class="mu-foot">
           <button class="mu-btn mu-btn--cancel" @click="close" :disabled="restartowanie">Zamknij</button>
           <button class="mu-btn mu-btn--upload" :disabled="busy || restartowanie" @click="run">
-            {{ busy ? 'Pobieram…' : restartowanie ? 'Restartuję…' : 'Sprawdź aktualizacje' }}
+            {{ busy ? 'Pobieram…' : restartowanie ? 'Twardy restart…' : 'Sprawdź aktualizacje' }}
           </button>
         </div>
       </div>

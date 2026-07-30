@@ -70,7 +70,9 @@ export default {
     function contentText(card) {
       const attachNames = (card.zalaczniki || []).map((a) => a.nazwa || "").join(" ");
       if (MODULAR.has(props.coll)) {
-        const els = (card.updates || []).flatMap((u) => (u.elementy || []).map((e) => e.tresc || ""));
+        const els = (card.updates || []).flatMap((u) =>
+          (u.elementy || []).flatMap((e) => [e.tytul || "", e.tresc || ""])
+        );
         return [...els, attachNames].join(" ");
       }
       return [card.opis || "", ...(card.komentarze || []).map((k) => k.tekst || ""), attachNames].join(" ");
@@ -257,7 +259,7 @@ export default {
 
             <div v-if="selected.opis" class="krow">
               <span class="krow__ico"><i class="ph-fill ph-info"></i></span>
-              <div class="krow__cnt hist-ro-desc">{{ selected.opis }}</div>
+              <div class="krow__cnt hist-ro-desc autolink-text" v-autolink="selected.opis"></div>
             </div>
 
             <div v-if="selected.komentarze?.length" class="krow karta__chat">
@@ -267,7 +269,7 @@ export default {
                   <div v-for="m in selected.komentarze" :key="m.id" class="chat-msg" :class="'chat-msg--' + m.autor">
                     <div class="chat-bubble" :class="{ 'chat-bubble--deleted': m.usunieta }">
                       <span v-if="m.usunieta" class="chat-deleted-lbl"><i class="ph ph-prohibit"></i> Wiadomość usunięta</span>
-                      <template v-else>{{ m.tekst }}</template>
+                      <span v-else class="autolink-text" v-autolink="m.tekst"></span>
                     </div>
                     <div class="chat-ts">{{ chatTime(m.ts) }}<span v-if="m.editedAt && !m.usunieta" class="chat-edited"> · edytowano {{ chatTime(m.editedAt) }}</span></div>
                   </div>
