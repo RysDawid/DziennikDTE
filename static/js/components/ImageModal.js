@@ -209,8 +209,10 @@ export default {
             </div>
           </div>
           <div class="img-modal__alt">
-            <textarea v-if="editable" v-model="currentAlt" v-detect-links="currentAlt" class="img-modal__alt-inp"
-                      rows="2" placeholder="Dodaj opis / alt do zdjęcia…"></textarea>
+            <div v-if="editable" class="link-highlight-field">
+              <textarea v-model="currentAlt" v-detect-links="currentAlt" class="img-modal__alt-inp"
+                        rows="2" placeholder="Dodaj opis / alt do zdjęcia…"></textarea>
+            </div>
             <div v-else-if="currentAlt" class="img-modal__alt-ro autolink-text" v-autolink="currentAlt"></div>
           </div>
         </div>

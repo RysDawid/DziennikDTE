@@ -545,7 +545,7 @@ export default {
 
                 <!-- Po wyborze predefiniowanego statusu: opis + media -->
                 <template v-if="rec(c.key).status">
-                  <div class="field-with-links">
+                  <div class="link-highlight-field">
                     <textarea class="card__inny" v-livemodel="rec(c.key).opis || ''"
                               v-detect-links="rec(c.key).opis || ''"
                               :disabled="!store.raport.editable"

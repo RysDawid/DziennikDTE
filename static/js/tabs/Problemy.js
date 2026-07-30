@@ -119,15 +119,17 @@ export default {
           <div class="krow">
             <span class="krow__ico"><i class="ph-fill ph-info"></i></span>
             <div class="krow__cnt">
-              <textarea
-                class="karta__opis"
-                v-autogrow="c.opis"
-                v-spellfocus
-                v-livemodel="c.opis"
-                v-detect-links="c.opis"
-                placeholder="Opis problemu…"
-                @input="e => patchCard(c.id, { opis: e.target.value })"
-              ></textarea>
+              <div class="link-highlight-field">
+                <textarea
+                  class="karta__opis"
+                  v-autogrow="c.opis"
+                  v-spellfocus
+                  v-livemodel="c.opis"
+                  v-detect-links="c.opis"
+                  placeholder="Opis problemu…"
+                  @input="e => patchCard(c.id, { opis: e.target.value })"
+                ></textarea>
+              </div>
             </div>
           </div>
 
@@ -141,8 +143,10 @@ export default {
                   class="chat-msg" :class="'chat-msg--' + m.autor"
                 >
                   <div v-if="editMsg && editMsg.cardId === c.id && editMsg.msgId === m.id" class="chat-edit">
-                    <input class="chat-edit__inp" :data-edit="c.id + ':' + m.id" v-model="editMsgText" v-detect-links="editMsgText"
-                           @keydown.enter.prevent="commitEditMsg" @keydown.esc="cancelEditMsg" />
+                    <div class="link-highlight-field">
+                      <input class="chat-edit__inp" :data-edit="c.id + ':' + m.id" v-model="editMsgText" v-detect-links="editMsgText"
+                             @keydown.enter.prevent="commitEditMsg" @keydown.esc="cancelEditMsg" />
+                    </div>
                     <button class="chat-edit__btn chat-edit__btn--ok" @click="commitEditMsg" title="Zapisz"><i class="ph-fill ph-check"></i></button>
                     <button class="chat-edit__btn chat-edit__btn--cancel" @click="cancelEditMsg" title="Anuluj"><i class="ph-fill ph-x"></i></button>
                   </div>
@@ -158,13 +162,15 @@ export default {
                 </div>
               </div>
               <div class="chat-reply">
-                <input
-                  class="chat-input"
-                  v-model="replyText[c.id]"
-                  v-detect-links="replyText[c.id]"
-                  placeholder="Napisz wiadomość lub status"
-                  @keydown.enter.prevent="openSendMenu(c, $event)"
-                />
+                <div class="link-highlight-field">
+                  <input
+                    class="chat-input"
+                    v-model="replyText[c.id]"
+                    v-detect-links="replyText[c.id]"
+                    placeholder="Napisz wiadomość lub status"
+                    @keydown.enter.prevent="openSendMenu(c, $event)"
+                  />
+                </div>
                 <button class="chat-send" @click="openSendMenu(c, $event)"><i class="ph-fill ph-paper-plane-right"></i></button>
               </div>
             </div>

@@ -285,10 +285,14 @@ export default {
               <img v-for="(mUrl,i) in (el.urls||[])" :key="i" v-skel :src="mUrl" @click="openLightbox(el, i)" />
               <button v-if="!readonly" class="btn-media pel__mediaBtn" @click="mediaTarget = el">Dodaj zdjęcia…</button>
             </div>
-            <textarea v-else-if="el.typ === 'opis'" class="pel__txt" v-autogrow="el.tresc" v-spellfocus v-livemodel="el.tresc" v-detect-links="el.tresc" :readonly="readonly"
-                      placeholder="Opis…" @input="e => setElContent(el, e.target.value)"></textarea>
-            <textarea v-else-if="el.typ === 'kontakt'" class="pel__txt" v-autogrow="el.tresc" v-spellfocus v-livemodel="el.tresc" v-detect-links="el.tresc" :readonly="readonly"
-                      :placeholder="elPlaceholder(el.typ)" @input="e => setElContent(el, e.target.value)"></textarea>
+            <div v-else-if="el.typ === 'opis'" class="link-highlight-field">
+              <textarea class="pel__txt" v-autogrow="el.tresc" v-spellfocus v-livemodel="el.tresc" v-detect-links="el.tresc" :readonly="readonly"
+                        placeholder="Opis…" @input="e => setElContent(el, e.target.value)"></textarea>
+            </div>
+            <div v-else-if="el.typ === 'kontakt'" class="link-highlight-field">
+              <textarea class="pel__txt" v-autogrow="el.tresc" v-spellfocus v-livemodel="el.tresc" v-detect-links="el.tresc" :readonly="readonly"
+                        :placeholder="elPlaceholder(el.typ)" @input="e => setElContent(el, e.target.value)"></textarea>
+            </div>
             <div v-else-if="el.typ === 'link'" class="pel__link-fields">
               <input class="pel__inp pel__link-title" v-livemodel="el.tytul || ''" placeholder="Tytuł linku…" :readonly="readonly"
                      @change="e => setElTitle(el, e.target.value)" />
@@ -298,10 +302,10 @@ export default {
                 <button v-if="el.tresc" class="pel__open" @click="openLink(el.tresc)" :title="linkOpenTitle(el.tresc)"><i :class="linkOpenIcon(el.tresc)"></i></button>
               </div>
             </div>
-            <template v-else>
+            <div v-else class="link-highlight-field">
               <input class="pel__inp" v-livemodel="el.tresc" v-detect-links="el.tresc" :placeholder="elPlaceholder(el.typ)" :readonly="readonly"
                      @change="e => setElContent(el, e.target.value)" />
-            </template>
+            </div>
 
             <span v-if="!readonly" class="pel__handle drag-handle" title="Przeciągnij"></span>
           </div>

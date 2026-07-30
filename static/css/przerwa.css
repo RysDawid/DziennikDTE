@@ -126,7 +126,6 @@
 }
 .pel {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 9px;
   border: var(--bw) solid var(--border);
@@ -169,11 +168,6 @@
   font-size: 12px;
   padding: 5px 2px;
   outline: none;
-}
-.pel > .detected-links {
-  order: 4;
-  width: calc(100% - 27px);
-  margin-left: 27px;
 }
 .pel__link-fields {
   flex: 1;

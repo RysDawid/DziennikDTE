@@ -99,10 +99,6 @@ export function linkifyParts(value) {
   return parts;
 }
 
-export function textLinks(value) {
-  return linkifyParts(value).filter((part) => part.href);
-}
-
 // Jedna współdzielona sekwencja na kartę przeglądarki. Może ją uruchomić
 // jednocześnie modal aktualizacji i komunikat WebSocket — oba dostaną ten sam
 // Promise, więc nie powstaną dwa równoległe pollingi/przeładowania.

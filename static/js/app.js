@@ -9,7 +9,7 @@ import PrzerwaTechniczna from "./tabs/PrzerwaTechniczna.js";
 import Projekty from "./tabs/Projekty.js";
 import { PRIO } from "./tabs/cardTab.js";
 import TechMenu from "./components/TechMenu.js";
-import { linkifyParts, textLinks } from "./utils.js";
+import { linkifyParts } from "./utils.js";
 
 // Zakładki pogrupowane wizualnie (większy odstęp MIĘDZY grupami, zakładki
 // WEWNĄTRZ grupy stykają się jak dotychczas — styl "teczek"). Kolejność grup
@@ -280,24 +280,87 @@ app.directive("autolink", {
   },
 });
 
-// v-detect-links="tekst": natywne textarea/input pozostaje edytowalne, a
-// wykryte URL-e pojawiają się bezpośrednio pod nim jako klikalne odnośniki.
+// v-detect-links="tekst": warstwa lustrzana pod natywnym textarea/input pozwala
+// wyróżniać URL-e WEWNĄTRZ pola bez dublowania tekstu poza jego ramką. Samo pole
+// nadal obsługuje kursor, zaznaczanie, spellcheck i wszystkie skróty edycyjne.
+const MIRROR_STYLE_PROPS = [
+  "fontFamily", "fontSize", "fontWeight", "fontStyle", "fontVariant",
+  "letterSpacing", "lineHeight", "textAlign", "textIndent", "textTransform",
+  "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+  "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth",
+  "borderTopStyle", "borderRightStyle", "borderBottomStyle", "borderLeftStyle",
+  "boxSizing", "tabSize",
+];
+
+function refreshLinkMirrorStyle(el) {
+  const mirror = el._linkMirror;
+  const field = el.closest(".link-highlight-field");
+  if (!mirror || !field) return;
+
+  // Na czas pomiaru przywróć oryginalne tło i kolor pola. Dzięki temu poprawnie
+  // odczytujemy także wariant :focus oraz kolory po zmianie motywu.
+  field.classList.remove("is-highlight-ready");
+  const css = getComputedStyle(el);
+  for (const prop of MIRROR_STYLE_PROPS) mirror.style[prop] = css[prop];
+  mirror.style.color = css.color;
+  mirror.style.backgroundColor = css.backgroundColor;
+  mirror.style.backgroundImage = css.backgroundImage;
+  mirror.style.borderColor = "transparent";
+  el.style.caretColor = css.color;
+  field.classList.add("is-highlight-ready");
+}
+
+function syncLinkMirrorScroll(el) {
+  if (!el._linkMirror) return;
+  el._linkMirror.scrollTop = el.scrollTop;
+  el._linkMirror.scrollLeft = el.scrollLeft;
+}
+
 function renderDetectedLinks(el, value) {
-  const box = el._detectedLinks;
-  if (!box) return;
-  const links = textLinks(value);
-  box.replaceChildren(...links.map(linkAnchor));
-  box.hidden = !links.length;
+  const mirror = el._linkMirror;
+  if (!mirror) return;
+  const fragment = document.createDocumentFragment();
+  for (const part of linkifyParts(value)) {
+    if (part.href) {
+      const mark = document.createElement("span");
+      mark.className = "inline-link-highlight";
+      mark.textContent = part.text;
+      fragment.append(mark);
+    } else {
+      fragment.append(document.createTextNode(part.text));
+    }
+  }
+  // Ostatni pusty wiersz textarea musi istnieć też w lustrze, inaczej przy
+  // przewijaniu końcówki treści obie warstwy rozjadą się o jeden wiersz.
+  if (el.tagName === "TEXTAREA" && String(value ?? "").endsWith("\n")) {
+    fragment.append(document.createTextNode("\u200b"));
+  }
+  mirror.replaceChildren(fragment);
+  syncLinkMirrorScroll(el);
 }
 app.directive("detect-links", {
   mounted(el, binding) {
-    const box = document.createElement("div");
-    box.className = "detected-links";
-    box.hidden = true;
-    el.insertAdjacentElement("afterend", box);
-    el._detectedLinks = box;
-    el._detectLinksInput = () => renderDetectedLinks(el, el.value);
+    const field = el.closest(".link-highlight-field");
+    if (!field) {
+      console.warn("v-detect-links wymaga rodzica .link-highlight-field", el);
+      return;
+    }
+    const mirror = document.createElement("div");
+    mirror.className = `link-highlight-field__mirror${el.tagName === "INPUT" ? " is-single-line" : ""}`;
+    mirror.setAttribute("aria-hidden", "true");
+    field.insertBefore(mirror, el);
+    el._linkMirror = mirror;
+    el._detectLinksInput = () => {
+      renderDetectedLinks(el, el.value);
+      syncLinkMirrorScroll(el);
+    };
+    el._detectLinksScroll = () => syncLinkMirrorScroll(el);
+    el._detectLinksRestyle = () => requestAnimationFrame(() => refreshLinkMirrorStyle(el));
     el.addEventListener("input", el._detectLinksInput);
+    el.addEventListener("scroll", el._detectLinksScroll);
+    el.addEventListener("focus", el._detectLinksRestyle);
+    el.addEventListener("blur", el._detectLinksRestyle);
+    refreshLinkMirrorStyle(el);
     renderDetectedLinks(el, binding.value ?? el.value);
   },
   updated(el, binding) {
@@ -305,9 +368,15 @@ app.directive("detect-links", {
   },
   beforeUnmount(el) {
     el.removeEventListener("input", el._detectLinksInput);
-    el._detectedLinks?.remove();
-    delete el._detectedLinks;
+    el.removeEventListener("scroll", el._detectLinksScroll);
+    el.removeEventListener("focus", el._detectLinksRestyle);
+    el.removeEventListener("blur", el._detectLinksRestyle);
+    el._linkMirror?.remove();
+    el.closest(".link-highlight-field")?.classList.remove("is-highlight-ready");
+    delete el._linkMirror;
     delete el._detectLinksInput;
+    delete el._detectLinksScroll;
+    delete el._detectLinksRestyle;
   },
 });
 
